@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# Data (don't commit large files)
+data/raw/*
+data/processed/*
+*.csv
+*.parquet
+
+# Models (DVC will track these)
+models/*.pkl
+models/*.joblib
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
