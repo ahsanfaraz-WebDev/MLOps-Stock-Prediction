@@ -89,11 +89,16 @@ services:
         mkdir -p /sources/logs /sources/dags /sources/plugins
         chown -R $${AIRFLOW_UID:-50000}:0 /sources /opt/airflow 2>/dev/null || true
         echo "Running Airflow DB migration..."
-        airflow db migrate
+        # Use python -m airflow to ensure we use the system installation
+        python -m airflow db migrate || /usr/local/bin/airflow db migrate
         echo "Creating Airflow admin user..."
-        airflow users create --username $${_AIRFLOW_WWW_USER_USERNAME:-airflow} \
+        python -m airflow users create --username $${_AIRFLOW_WWW_USER_USERNAME:-airflow} \
           --firstname Admin --lastname User --role Admin \
-          --email admin@example.com --password $${_AIRFLOW_WWW_USER_PASSWORD:-airflow} || echo "User may already exist"
+          --email admin@example.com --password $${_AIRFLOW_WWW_USER_PASSWORD:-airflow} || \
+        /usr/local/bin/airflow users create --username $${_AIRFLOW_WWW_USER_USERNAME:-airflow} \
+          --firstname Admin --lastname User --role Admin \
+          --email admin@example.com --password $${_AIRFLOW_WWW_USER_PASSWORD:-airflow} || \
+        echo "User may already exist"
         echo "Airflow initialization complete!"
 
 volumes:
