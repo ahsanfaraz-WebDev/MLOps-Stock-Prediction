@@ -81,8 +81,8 @@ services:
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}:/opt/airflow
     user: "0:0"
-    # Use the entrypoint script that comes with Airflow image
-    # It handles all the initialization automatically based on environment variables
+    # The entrypoint script runs initialization automatically, then we run a simple command
+    command: ["bash", "-c", "echo 'Airflow initialization completed'"]
 
 volumes:
   postgres-db-volume:
