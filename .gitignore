@@ -22,6 +22,11 @@ models/*.joblib
 # Airflow
 airflow/logs/
 airflow/airflow.db
+airflow/airflow.cfg
+
+# Docker
+.docker/
+docker-compose.override.yml
 
 # OS
 .DS_Store
