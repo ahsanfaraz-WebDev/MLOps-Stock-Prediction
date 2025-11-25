@@ -85,16 +85,16 @@ services:
     command:
       - -c
       - |
-        if [[ -z "$${AIRFLOW_UID}" ]]; then
-          echo
-          echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID is not set!\033[0m"
-          echo "Setting AIRFLOW_UID to 50000"
-          export AIRFLOW_UID=50000
-        fi
+        echo "Initializing Airflow..."
         mkdir -p /sources/logs /sources/dags /sources/plugins
-        chown -R "$${AIRFLOW_UID}:0" /sources/logs /sources/dags /sources/plugins || true
-        chown -R "$${AIRFLOW_UID}:0" /opt/airflow || true
-        exec /entrypoint airflow version
+        chown -R $${AIRFLOW_UID:-50000}:0 /sources /opt/airflow 2>/dev/null || true
+        echo "Running Airflow DB migration..."
+        airflow db migrate
+        echo "Creating Airflow admin user..."
+        airflow users create --username $${_AIRFLOW_WWW_USER_USERNAME:-airflow} \
+          --firstname Admin --lastname User --role Admin \
+          --email admin@example.com --password $${_AIRFLOW_WWW_USER_PASSWORD:-airflow} || echo "User may already exist"
+        echo "Airflow initialization complete!"
 
 volumes:
   postgres-db-volume:
