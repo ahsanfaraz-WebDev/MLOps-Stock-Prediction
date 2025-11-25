@@ -21,8 +21,9 @@ WORKDIR /opt/airflow
 # Copy requirements file first (for better caching)
 COPY requirements.txt /tmp/requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# Install Python dependencies with increased timeout and retries
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --timeout=300 --retries=5 -r /tmp/requirements.txt
 
 # Set Python path
 ENV PYTHONPATH=/opt/airflow
