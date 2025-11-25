@@ -35,7 +35,7 @@ dag = DAG(
     'stock_prediction_pipeline',
     default_args=default_args,
     description='ETL and ML pipeline for stock price prediction using Alpha Vantage API',
-    schedule_interval='@daily',  # Run once per day at midnight
+    schedule='@daily',  # Run once per day at midnight (using schedule instead of schedule_interval)
     catchup=False,  # Don't backfill
     tags=['mlops', 'stock-prediction', 'etl'],
 )
@@ -95,7 +95,6 @@ def quality_check_task(**context):
 quality_check = PythonOperator(
     task_id='data_quality_check',
     python_callable=quality_check_task,
-    provide_context=True,
     dag=dag,
 )
 
@@ -128,7 +127,6 @@ def transform_task(**context):
 transform = PythonOperator(
     task_id='transform_data',
     python_callable=transform_task,
-    provide_context=True,
     dag=dag,
 )
 
@@ -202,7 +200,6 @@ def dvc_version_task(**context):
 dvc_version = PythonOperator(
     task_id='version_with_dvc',
     python_callable=dvc_version_task,
-    provide_context=True,
     dag=dag,
 )
 
@@ -248,7 +245,6 @@ def train_model_task(**context):
 train_model = PythonOperator(
     task_id='train_model',
     python_callable=train_model_task,
-    provide_context=True,
     dag=dag,
 )
 
