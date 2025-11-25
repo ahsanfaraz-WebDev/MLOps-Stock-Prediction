@@ -3,12 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
+
+# Virtual Environments
 env/
 venv/
 .env
 
-# Data (don't commit large files)
+# Data (don't commit large files directly)
 data/raw/*
 data/processed/*
 *.csv
@@ -29,3 +30,19 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# DVC - Ignore actual data and models (DVC will track them via .dvc files)
+data/raw/*.csv
+data/processed/*.csv
+models/*.pkl
+models/*.joblib
+
+# DVC Files to Commit
+!.dvc/
+!.dvc/config
+!.dvc/.gitignore
+!.dvc/plots
+
+# Ignore DVC cache and temp
+.dvc/cache/
+.dvc/tmp/
