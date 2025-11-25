@@ -16,6 +16,7 @@ x-airflow-common:
     PYTHONPATH: /opt/airflow
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}:/opt/airflow
+    - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
