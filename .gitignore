@@ -23,6 +23,12 @@ models/*.joblib
 airflow/logs/
 airflow/airflow.db
 airflow/airflow.cfg
+airflow-webserver.pid
+webserver_config.py
+airflow.cfg
+dags/
+logs/
+plugins/
 
 # Docker
 .docker/

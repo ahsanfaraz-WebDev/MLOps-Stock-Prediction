@@ -22,7 +22,7 @@ WORKDIR /opt/airflow
 COPY requirements.txt /tmp/requirements.txt
 
 # Install Python dependencies with increased timeout and retries
-# Upgrade pip first, then install packages
+# Upgrade pip first, then install packagoes
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir --timeout=300 --retries=5 -r /tmp/requirements.txt
 
