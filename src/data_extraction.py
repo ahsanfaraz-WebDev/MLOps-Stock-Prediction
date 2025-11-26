@@ -41,12 +41,14 @@ def fetch_stock_data(symbol=None, api_key=None):
     url = 'https://www.alphavantage.co/query'
     
     # API parameters
+    # Note: 'compact' returns last 100 data points (free tier)
+    # 'full' requires premium API key and may hit rate limits
     params = {
         'function': 'TIME_SERIES_INTRADAY',
         'symbol': symbol,
         'interval': '60min',  # 1 hour intervals
         'apikey': api_key,
-        'outputsize': 'full',  # Get more historical data
+        'outputsize': 'compact',  # Use 'compact' for free tier (last 100 data points)
         'datatype': 'json'
     }
     
@@ -67,6 +69,14 @@ def fetch_stock_data(symbol=None, api_key=None):
         if 'Note' in data:
             raise Exception(f"API Rate Limit: {data['Note']}")
         
+        # Check for Information message (usually rate limit or API key issue)
+        if 'Information' in data:
+            info_msg = data['Information']
+            if 'API call frequency' in info_msg or 'rate' in info_msg.lower():
+                raise Exception(f"API Rate Limit: {info_msg}")
+            else:
+                raise Exception(f"API Information: {info_msg}. This usually means rate limit exceeded or API key issue.")
+        
         # Extract time series data
         time_series_key = 'Time Series (60min)'
         if time_series_key not in data:
@@ -75,7 +85,9 @@ def fetch_stock_data(symbol=None, api_key=None):
             if possible_keys:
                 time_series_key = possible_keys[0]
             else:
-                raise Exception(f"No time series data found. Response keys: {list(data.keys())}")
+                # Log the full response for debugging
+                print(f"DEBUG: Full API response: {data}")
+                raise Exception(f"No time series data found. Response keys: {list(data.keys())}. Full response: {data}")
         
         time_series = data.get(time_series_key, {})
         
@@ -156,4 +168,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n✗ Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
+
+
 
