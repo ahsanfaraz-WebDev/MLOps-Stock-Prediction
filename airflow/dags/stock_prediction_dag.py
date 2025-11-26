@@ -11,7 +11,9 @@ import os
 from pathlib import Path
 
 # Add project root to Python path so we can import our modules
-project_root = Path(__file__).parent.parent.parent
+# DAG file is at: /opt/airflow/dags/stock_prediction_dag.py
+# Project root is: /opt/airflow
+project_root = Path('/opt/airflow')
 sys.path.insert(0, str(project_root))
 
 # Import our custom modules
