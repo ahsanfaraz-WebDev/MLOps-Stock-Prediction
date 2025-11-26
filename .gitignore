@@ -12,7 +12,11 @@ venv/
 # Data (don't commit large files directly)
 data/raw/*
 data/processed/*
+# IMPORTANT: Allow .dvc metadata files to be tracked (DVC needs these)
+!data/processed/*.dvc
+!data/raw/*.dvc
 *.csv
+!*.dvc
 *.parquet
 
 # Models (DVC will track these)
@@ -45,6 +49,8 @@ Thumbs.db
 # DVC - Ignore actual data and models (DVC will track them via .dvc files)
 data/raw/*.csv
 data/processed/*.csv
+# IMPORTANT: Allow .dvc files (metadata files) to be tracked by git
+!*.dvc
 models/*.pkl
 models/*.joblib
 
@@ -53,6 +59,8 @@ models/*.joblib
 !.dvc/config
 !.dvc/.gitignore
 !.dvc/plots
+# Allow all .dvc metadata files to be tracked
+!**/*.dvc
 
 # Ignore DVC cache and temp
 .dvc/cache/
