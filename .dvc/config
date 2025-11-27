@@ -2,6 +2,6 @@
     remote = myremote
 ['remote "myremote"']
     url = gdrive://1yMPjUTiwQ3DjPhgc-ujLbJeM0ft08hna
-    gdrive_service_account_json_file_path = gdrive-service-account.json
+    gdrive_service_account_json_file_path = /opt/airflow/gdrive-service-account.json
 ['remote "origin"']
     url = https://dagshub.com/ahsanfaraz-WebDev/MLOps-Stock-Prediction.dvc
