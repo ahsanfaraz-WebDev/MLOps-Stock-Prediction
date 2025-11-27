@@ -1,0 +1,5 @@
+outs:
+- md5: a204acbea600ae7203bd77ee44be1314
+  size: 52520
+  hash: md5
+  path: stock_data_processed_20251127_125910.csv
