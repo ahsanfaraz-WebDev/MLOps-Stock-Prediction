@@ -95,25 +95,31 @@ jobs:
         echo "Training model with data: $LATEST_DATA"
         python src/train.py "$LATEST_DATA"
     
-    - name: Compare models and post report
+    - name: Set up Node.js for CML
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install CML
+      run: |
+        npm install -g @dvcorg/cml
+    
+    - name: Compare models with CML
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        # Install MLflow client and requests for GitHub API
-        pip install mlflow requests
+        # Install MLflow client for model comparison
+        pip install mlflow
         
-        # Get current model metrics from MLflow and post as PR comment
+        # Get current model metrics from MLflow
         python << EOF
         import mlflow
         import os
         import sys
-        import requests
-        import json
         
         mlflow.set_tracking_uri(os.environ.get('MLFLOW_TRACKING_URI'))
         if os.environ.get('DAGSHUB_USERNAME') and os.environ.get('DAGSHUB_TOKEN'):
@@ -132,7 +138,7 @@ jobs:
             current_test_r2 = latest_run.data.metrics.get('test_r2', None)
             
             # Build report
-            report_lines = ["## Model Performance Comparison\n"]
+            report_lines = ["## Model Performance Comparison\n\n"]
             
             # Try to get production model metrics
             try:
@@ -176,40 +182,26 @@ jobs:
             report_lines = ["## Model Training Results\n\n"]
             report_lines.append(f"⚠️ Error retrieving model metrics: {str(e)}\n")
         
-        # Post report as PR comment using GitHub API
+        # Write report to file for CML
         report_body = "".join(report_lines)
-        print("\n" + report_body)
+        with open('report.md', 'w') as f:
+            f.write(report_body)
         
-        # Get PR number from GitHub event
-        pr_number = os.environ.get('GITHUB_EVENT_PATH')
-        if pr_number and os.path.exists(pr_number):
-            with open(pr_number, 'r') as f:
-                event_data = json.load(f)
-                pr_number = event_data.get('pull_request', {}).get('number')
+        print("\n" + "="*60)
+        print("MODEL COMPARISON REPORT")
+        print("="*60)
+        print(report_body)
+        print("="*60 + "\n")
         
-        if pr_number:
-            github_token = os.environ.get('GITHUB_TOKEN')
-            repo = os.environ.get('GITHUB_REPOSITORY')
-            
-            url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
-            headers = {
-                "Authorization": f"token {github_token}",
-                "Accept": "application/vnd.github.v3+json"
-            }
-            data = {"body": report_body}
-            
-            response = requests.post(url, headers=headers, json=data)
-            if response.status_code == 201:
-                print("✅ Model comparison report posted as PR comment")
-            else:
-                print(f"⚠️ Failed to post comment: {response.status_code} - {response.text}")
-        else:
-            print("⚠️ Could not determine PR number, skipping comment post")
-        
-        # Exit with error if model is worse
+        # Exit with error if model is worse (before CML posts comment)
         if model_worse:
             sys.exit(1)
         EOF
+        
+        # Post CML report as PR comment
+        if [ -f "report.md" ]; then
+          cml comment create report.md || echo "CML comment failed, continuing..."
+        fi
     
     - name: Check model performance
       run: |
