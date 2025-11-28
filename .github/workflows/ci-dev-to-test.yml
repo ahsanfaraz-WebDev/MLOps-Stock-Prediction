@@ -57,6 +57,7 @@ jobs:
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Find the latest processed data file
         LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
@@ -80,6 +81,7 @@ jobs:
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Install MLflow client for model comparison
         pip install mlflow
