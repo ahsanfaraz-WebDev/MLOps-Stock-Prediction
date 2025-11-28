@@ -38,17 +38,18 @@ jobs:
       run: |
         dvc remote list || echo "DVC remotes not configured"
     
-    - name: Configure AWS credentials
+    - name: Pull latest data from DVC
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: us-east-1
       run: |
-        echo "AWS credentials configured"
-    
-    - name: Pull latest data from DVC
-      run: |
-        dvc pull || echo "DVC pull failed, continuing..."
+        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+          echo "AWS credentials configured, attempting DVC pull..."
+          dvc pull || echo "DVC pull failed, will try to use existing data or fetch new data"
+        else
+          echo "AWS credentials not configured, skipping DVC pull"
+        fi
       continue-on-error: true
     
     - name: Train model
@@ -61,13 +62,36 @@ jobs:
       run: |
         # Find the latest processed data file
         LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
+        
         if [ -z "$LATEST_DATA" ]; then
-          echo "No processed data found. Running data pipeline..."
-          # Run data extraction and transformation
-          python src/data_extraction.py
-          python src/data_transformation.py data/raw/stock_data_AAPL_*.csv
-          LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv | head -1)
+          echo "No processed data found. Attempting to run data pipeline..."
+          
+          # Try to fetch new data (may fail due to API rate limits)
+          if python src/data_extraction.py 2>&1 | grep -q "Rate Limit"; then
+            echo "⚠️ Alpha Vantage API rate limit reached. Checking for existing raw data..."
+            # Check if there's any raw data we can use
+            RAW_DATA=$(ls -t data/raw/stock_data_*.csv 2>/dev/null | head -1)
+            if [ -n "$RAW_DATA" ]; then
+              echo "Found existing raw data: $RAW_DATA"
+              python src/data_transformation.py "$RAW_DATA"
+              LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
+            else
+              echo "❌ No data available: API rate limited and no existing data found"
+              echo "Skipping model training - please ensure data is available via DVC or wait for API limit reset"
+              exit 1
+            fi
+          else
+            # Data extraction succeeded, now transform
+            python src/data_transformation.py data/raw/stock_data_AAPL_*.csv
+            LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv | head -1)
+          fi
         fi
+        
+        if [ -z "$LATEST_DATA" ]; then
+          echo "❌ Error: No processed data file found after attempting data pipeline"
+          exit 1
+        fi
+        
         echo "Training model with data: $LATEST_DATA"
         python src/train.py "$LATEST_DATA"
     
