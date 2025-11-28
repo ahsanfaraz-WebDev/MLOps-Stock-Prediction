@@ -95,26 +95,25 @@ jobs:
         echo "Training model with data: $LATEST_DATA"
         python src/train.py "$LATEST_DATA"
     
-    - name: Install CML
-      run: |
-        pip install dvc[all] cml
-    
-    - name: Compare models with CML
+    - name: Compare models and post report
       env:
-        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        # Install MLflow client for model comparison
-        pip install mlflow
+        # Install MLflow client and requests for GitHub API
+        pip install mlflow requests
         
-        # Get current model metrics from MLflow
+        # Get current model metrics from MLflow and post as PR comment
         python << EOF
         import mlflow
         import os
         import sys
+        import requests
+        import json
         
         mlflow.set_tracking_uri(os.environ.get('MLFLOW_TRACKING_URI'))
         if os.environ.get('DAGSHUB_USERNAME') and os.environ.get('DAGSHUB_TOKEN'):
@@ -125,10 +124,15 @@ jobs:
         
         # Get the latest run (current model)
         from src.config import MODEL_NAME
+        model_worse = False
+        
         try:
             latest_run = client.search_runs(experiment_ids=["0"], max_results=1, order_by=["start_time DESC"])[0]
             current_test_rmse = latest_run.data.metrics.get('test_rmse', None)
             current_test_r2 = latest_run.data.metrics.get('test_r2', None)
+            
+            # Build report
+            report_lines = ["## Model Performance Comparison\n"]
             
             # Try to get production model metrics
             try:
@@ -139,50 +143,73 @@ jobs:
                     prod_test_rmse = prod_run.data.metrics.get('test_rmse', None)
                     prod_test_r2 = prod_run.data.metrics.get('test_r2', None)
                     
-                    # Compare models
-                    with open('report.md', 'w') as f:
-                        f.write("## Model Performance Comparison\n\n")
-                        f.write("### Current Model (from this PR)\n")
-                        f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
-                        f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
-                        f.write("### Production Model\n")
-                        f.write(f"- Test RMSE: {prod_test_rmse:.4f}\n")
-                        f.write(f"- Test R²: {prod_test_r2:.4f}\n\n")
-                        
-                        # Determine if model is better
-                        if current_test_rmse and prod_test_rmse:
-                            rmse_improvement = ((prod_test_rmse - current_test_rmse) / prod_test_rmse) * 100
-                            if current_test_rmse < prod_test_rmse:
-                                f.write(f"✅ **Model Improvement**: RMSE improved by {rmse_improvement:.2f}%\n")
-                            else:
-                                f.write(f"❌ **Model Degradation**: RMSE worsened by {abs(rmse_improvement):.2f}%\n")
-                                f.write("\n⚠️ **Merge should be blocked** - New model performs worse than production.\n")
-                                sys.exit(1)  # Exit with error to block merge
+                    report_lines.append("### Current Model (from this PR)\n")
+                    report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                    report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
+                    report_lines.append("### Production Model\n")
+                    report_lines.append(f"- Test RMSE: {prod_test_rmse:.4f}\n")
+                    report_lines.append(f"- Test R²: {prod_test_r2:.4f}\n\n")
+                    
+                    # Determine if model is better
+                    if current_test_rmse and prod_test_rmse:
+                        rmse_improvement = ((prod_test_rmse - current_test_rmse) / prod_test_rmse) * 100
+                        if current_test_rmse < prod_test_rmse:
+                            report_lines.append(f"✅ **Model Improvement**: RMSE improved by {rmse_improvement:.2f}%\n")
+                        else:
+                            report_lines.append(f"❌ **Model Degradation**: RMSE worsened by {abs(rmse_improvement):.2f}%\n")
+                            report_lines.append("\n⚠️ **Merge should be blocked** - New model performs worse than production.\n")
+                            model_worse = True
                 else:
                     # No production model, just report current metrics
-                    with open('report.md', 'w') as f:
-                        f.write("## Model Training Results\n\n")
-                        f.write("### Current Model\n")
-                        f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
-                        f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
-                        f.write("ℹ️ No production model found for comparison.\n")
+                    report_lines.append("### Current Model\n")
+                    report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                    report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
+                    report_lines.append("ℹ️ No production model found for comparison.\n")
             except Exception as e:
                 # No production model in registry yet
-                with open('report.md', 'w') as f:
-                    f.write("## Model Training Results\n\n")
-                    f.write("### Current Model\n")
-                    f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
-                    f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
-                    f.write("ℹ️ No production model found for comparison.\n")
+                report_lines.append("### Current Model\n")
+                report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
+                report_lines.append("ℹ️ No production model found for comparison.\n")
         except Exception as e:
             print(f"Error comparing models: {e}")
+            report_lines = ["## Model Training Results\n\n"]
+            report_lines.append(f"⚠️ Error retrieving model metrics: {str(e)}\n")
+        
+        # Post report as PR comment using GitHub API
+        report_body = "".join(report_lines)
+        print("\n" + report_body)
+        
+        # Get PR number from GitHub event
+        pr_number = os.environ.get('GITHUB_EVENT_PATH')
+        if pr_number and os.path.exists(pr_number):
+            with open(pr_number, 'r') as f:
+                event_data = json.load(f)
+                pr_number = event_data.get('pull_request', {}).get('number')
+        
+        if pr_number:
+            github_token = os.environ.get('GITHUB_TOKEN')
+            repo = os.environ.get('GITHUB_REPOSITORY')
+            
+            url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
+            headers = {
+                "Authorization": f"token {github_token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            data = {"body": report_body}
+            
+            response = requests.post(url, headers=headers, json=data)
+            if response.status_code == 201:
+                print("✅ Model comparison report posted as PR comment")
+            else:
+                print(f"⚠️ Failed to post comment: {response.status_code} - {response.text}")
+        else:
+            print("⚠️ Could not determine PR number, skipping comment post")
+        
+        # Exit with error if model is worse
+        if model_worse:
             sys.exit(1)
         EOF
-        
-        # Post CML report as PR comment
-        if [ -f "report.md" ]; then
-          cml comment create report.md || echo "CML comment failed, continuing..."
-        fi
     
     - name: Check model performance
       run: |
