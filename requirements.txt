@@ -12,8 +12,11 @@ pydantic>=2.0.0,<2.6.0
 # MLOps Tools
 # Note: apache-airflow is already installed in base image
 mlflow>=2.8.0
-dvc>=3.20.0
-dvc[gdrive]>=3.20.0
+# DVC with AWS S3 support (latest available version for Python 3.8)
+# Note: DVC 3.42.0 is the latest version available
+dvc[s3]>=3.42.0
+# AWS SDK for Python (boto3) - required for S3 access
+boto3>=1.28.0
 
 # Monitoring
 prometheus-client>=0.17.0

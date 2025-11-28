@@ -9,6 +9,17 @@ env/
 venv/
 .env
 
+# AWS Credentials (DO NOT COMMIT)
+.env
+*.env
+aws-credentials.json
+
+# Service Account JSON files (DO NOT COMMIT)
+*-service-account.json
+*.json
+!package.json
+!package-lock.json
+
 # Data (don't commit large files directly)
 data/raw/*
 data/processed/*
