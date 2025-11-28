@@ -376,6 +376,33 @@ def train_model(data_path):
             print(f"\nTop 10 Most Important Features:")
             print(feature_importance.head(10).to_string(index=False))
             
+            # Register model in MLflow Model Registry
+            try:
+                from src.config import MODEL_NAME
+                model_uri = f"runs:/{mlflow.active_run().info.run_id}/model"
+                
+                # Register model in Model Registry
+                registered_model = mlflow.register_model(
+                    model_uri=model_uri,
+                    name=MODEL_NAME
+                )
+                print(f"\n✓ Model registered in MLflow Model Registry")
+                print(f"  Model Name: {MODEL_NAME}")
+                print(f"  Version: {registered_model.version}")
+                
+                # Transition to Staging stage (can be promoted to Production later)
+                client = mlflow.tracking.MlflowClient()
+                client.transition_model_version_stage(
+                    name=MODEL_NAME,
+                    version=registered_model.version,
+                    stage="Staging"
+                )
+                print(f"  Stage: Staging")
+                
+            except Exception as reg_error:
+                print(f"\n⚠️  Warning: Could not register model in Model Registry: {reg_error}")
+                print("  Model is still logged in MLflow, but not registered.")
+            
             print(f"\n✓ MLflow run completed!")
             print(f"Run ID: {mlflow.active_run().info.run_id}")
             

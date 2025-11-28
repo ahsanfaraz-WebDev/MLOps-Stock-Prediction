@@ -1,0 +1,170 @@
+name: CI - Dev to Test (Model Training & Comparison)
+
+on:
+  pull_request:
+    branches:
+      - test
+    paths:
+      - 'src/**'
+      - 'airflow/**'
+      - 'requirements.txt'
+      - '.github/workflows/**'
+
+jobs:
+  train-and-compare:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install dvc[s3] boto3
+    
+    - name: Configure Git
+      run: |
+        git config user.name "MLOps CI"
+        git config user.email "ci@mlops.local"
+    
+    - name: Set up DVC
+      run: |
+        dvc remote list || echo "DVC remotes not configured"
+    
+    - name: Configure AWS credentials
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+      run: |
+        echo "AWS credentials configured"
+    
+    - name: Pull latest data from DVC
+      run: |
+        dvc pull || echo "DVC pull failed, continuing..."
+      continue-on-error: true
+    
+    - name: Train model
+      env:
+        MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+        DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+      run: |
+        # Find the latest processed data file
+        LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
+        if [ -z "$LATEST_DATA" ]; then
+          echo "No processed data found. Running data pipeline..."
+          # Run data extraction and transformation
+          python src/data_extraction.py
+          python src/data_transformation.py data/raw/stock_data_AAPL_*.csv
+          LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv | head -1)
+        fi
+        echo "Training model with data: $LATEST_DATA"
+        python src/train.py "$LATEST_DATA"
+    
+    - name: Install CML
+      run: |
+        pip install dvc[all] cml
+    
+    - name: Compare models with CML
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+        DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      run: |
+        # Install MLflow client for model comparison
+        pip install mlflow
+        
+        # Get current model metrics from MLflow
+        python << EOF
+        import mlflow
+        import os
+        import sys
+        
+        mlflow.set_tracking_uri(os.environ.get('MLFLOW_TRACKING_URI'))
+        if os.environ.get('DAGSHUB_USERNAME') and os.environ.get('DAGSHUB_TOKEN'):
+            os.environ['MLFLOW_TRACKING_USERNAME'] = os.environ.get('DAGSHUB_USERNAME')
+            os.environ['MLFLOW_TRACKING_PASSWORD'] = os.environ.get('DAGSHUB_TOKEN')
+        
+        client = mlflow.tracking.MlflowClient()
+        
+        # Get the latest run (current model)
+        from src.config import MODEL_NAME
+        try:
+            latest_run = client.search_runs(experiment_ids=["0"], max_results=1, order_by=["start_time DESC"])[0]
+            current_test_rmse = latest_run.data.metrics.get('test_rmse', None)
+            current_test_r2 = latest_run.data.metrics.get('test_r2', None)
+            
+            # Try to get production model metrics
+            try:
+                prod_versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
+                if prod_versions:
+                    prod_version = prod_versions[0]
+                    prod_run = client.get_run(prod_version.run_id)
+                    prod_test_rmse = prod_run.data.metrics.get('test_rmse', None)
+                    prod_test_r2 = prod_run.data.metrics.get('test_r2', None)
+                    
+                    # Compare models
+                    with open('report.md', 'w') as f:
+                        f.write("## Model Performance Comparison\n\n")
+                        f.write("### Current Model (from this PR)\n")
+                        f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                        f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
+                        f.write("### Production Model\n")
+                        f.write(f"- Test RMSE: {prod_test_rmse:.4f}\n")
+                        f.write(f"- Test R²: {prod_test_r2:.4f}\n\n")
+                        
+                        # Determine if model is better
+                        if current_test_rmse and prod_test_rmse:
+                            rmse_improvement = ((prod_test_rmse - current_test_rmse) / prod_test_rmse) * 100
+                            if current_test_rmse < prod_test_rmse:
+                                f.write(f"✅ **Model Improvement**: RMSE improved by {rmse_improvement:.2f}%\n")
+                            else:
+                                f.write(f"❌ **Model Degradation**: RMSE worsened by {abs(rmse_improvement):.2f}%\n")
+                                f.write("\n⚠️ **Merge should be blocked** - New model performs worse than production.\n")
+                                sys.exit(1)  # Exit with error to block merge
+                else:
+                    # No production model, just report current metrics
+                    with open('report.md', 'w') as f:
+                        f.write("## Model Training Results\n\n")
+                        f.write("### Current Model\n")
+                        f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                        f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
+                        f.write("ℹ️ No production model found for comparison.\n")
+            except Exception as e:
+                # No production model in registry yet
+                with open('report.md', 'w') as f:
+                    f.write("## Model Training Results\n\n")
+                    f.write("### Current Model\n")
+                    f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                    f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
+                    f.write("ℹ️ No production model found for comparison.\n")
+        except Exception as e:
+            print(f"Error comparing models: {e}")
+            sys.exit(1)
+        EOF
+        
+        # Post CML report as PR comment
+        if [ -f "report.md" ]; then
+          cml comment create report.md || echo "CML comment failed, continuing..."
+        fi
+    
+    - name: Check model performance
+      run: |
+        # Verify model file exists
+        if [ ! -f "models/stock_model.pkl" ]; then
+          echo "Model training failed - no model file generated"
+          exit 1
+        fi
+        echo "Model training completed successfully"
+
+

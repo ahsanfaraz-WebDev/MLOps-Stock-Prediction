@@ -1,0 +1,30 @@
+# Docker Compose configuration for FastAPI API service
+# Usage: docker-compose -f docker-compose.api.yml up
+
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: mlops-stock-prediction-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-}
+      - DAGSHUB_USERNAME=${DAGSHUB_USERNAME:-}
+      - DAGSHUB_TOKEN=${DAGSHUB_TOKEN:-}
+    volumes:
+      - ./models:/app/models:ro
+      - ./.env:/app/.env:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+

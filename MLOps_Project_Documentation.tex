@@ -1,0 +1,1085 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{longtable}
+\usepackage{booktabs}
+
+\geometry{margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{MLOps Stock Prediction Project}
+\lhead{Complete Documentation}
+\cfoot{\thepage}
+
+\title{\textbf{MLOps Stock Prediction Project}\\
+\large Complete Implementation Documentation\\
+From Initialization to Model Training}
+\author{MLOps Team}
+\date{\today}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={MLOps Stock Prediction Project Documentation}
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Project Overview}
+
+This document provides a comprehensive guide to the MLOps Stock Prediction Project implementation. The project implements a complete MLOps pipeline for stock price prediction using Alpha Vantage API, Apache Airflow for orchestration, MLflow for experiment tracking, and DVC for data versioning.
+
+\subsection{Project Objectives}
+\begin{itemize}
+    \item Build an end-to-end MLOps pipeline for stock price prediction
+    \item Implement automated data extraction from Alpha Vantage API
+    \item Set up data quality checks and transformations
+    \item Train machine learning models with experiment tracking
+    \item Version control data and models using DVC
+    \item Orchestrate the entire pipeline using Apache Airflow
+\end{itemize}
+
+\subsection{Technology Stack}
+\begin{itemize}
+    \item \textbf{Orchestration}: Apache Airflow 2.7.0
+    \item \textbf{Data Versioning}: DVC (Data Version Control) with AWS S3 remote storage
+    \item \textbf{Cloud Storage}: AWS S3 (Amazon Simple Storage Service)
+    \item \textbf{Experiment Tracking}: MLflow with Dagshub integration
+    \item \textbf{Containerization}: Docker and Docker Compose
+    \item \textbf{API}: Alpha Vantage Stock API
+    \item \textbf{ML Framework}: scikit-learn (RandomForestRegressor)
+    \item \textbf{Data Processing}: pandas, numpy
+    \item \textbf{Data Quality}: ydata-profiling, great-expectations
+\end{itemize}
+
+\newpage
+
+\section{Step 1: Project Initialization}
+
+\subsection{Objective}
+Set up the project structure, initialize Git repository, and configure basic project files.
+
+\subsection{Commands Executed}
+\begin{verbatim}
+mkdir MLOps-Stock-Prediction
+cd MLOps-Stock-Prediction
+git init
+git checkout -b dev
+\end{verbatim}
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{.gitignore} - Git ignore patterns for Python, data, models, and Airflow files
+    \item \texttt{README.md} - Project documentation (if created)
+\end{itemize}
+
+\subsection{File Purposes}
+\begin{itemize}
+    \item \texttt{.gitignore}: Prevents committing unnecessary files like \_\_pycache\_\_, .env, data files, model files, and Airflow logs
+\end{itemize}
+
+\subsection{Directory Structure Created}
+\begin{verbatim}
+MLOps-Stock-Prediction/
+├── .git/
+├── .gitignore
+└── README.md (optional)
+\end{verbatim}
+
+\newpage
+
+\section{Step 2: Environment Configuration}
+
+\subsection{Objective}
+Set up environment variables and configuration files for API keys and service credentials.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{.env} - Environment variables template (not committed to Git)
+\end{itemize}
+
+\subsection{File Contents Structure}
+The \texttt{.env} file contains:
+\begin{itemize}
+    \item \texttt{ALPHA\_VANTAGE\_KEY} - API key for Alpha Vantage
+    \item \texttt{DAGSHUB\_USERNAME} - Dagshub username
+    \item \texttt{DAGSHUB\_TOKEN} - Dagshub authentication token
+    \item \texttt{MLFLOW\_TRACKING\_URI} - MLflow tracking server URI
+    \item \texttt{STOCK\_SYMBOL} - Stock symbol to predict (default: AAPL)
+    \item \texttt{AIRFLOW\_UID} - Airflow user ID for Docker (default: 50000)
+    \item \texttt{\_AIRFLOW\_WWW\_USER\_USERNAME} - Airflow webserver username
+    \item \texttt{\_AIRFLOW\_WWW\_USER\_PASSWORD} - Airflow webserver password
+\end{itemize}
+
+\subsection{Purpose}
+The \texttt{.env} file stores sensitive credentials and configuration that should not be committed to version control. It is loaded by Python scripts using the \texttt{python-dotenv} library.
+
+\newpage
+
+\section{Step 3: Source Code Structure Setup}
+
+\subsection{Objective}
+Create the source code directory structure and configuration module.
+
+\subsection{Commands Executed}
+\begin{verbatim}
+mkdir src
+mkdir data
+mkdir data/raw
+mkdir data/processed
+mkdir models
+mkdir airflow
+mkdir airflow/dags
+mkdir airflow/logs
+mkdir airflow/plugins
+mkdir docker
+mkdir tests
+mkdir monitoring
+\end{verbatim}
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{src/\_\_init\_\_.py} - Python package marker for src directory
+    \item \texttt{src/config.py} - Centralized configuration module
+\end{itemize}
+
+\subsection{File Purposes}
+\begin{itemize}
+    \item \texttt{src/\_\_init\_\_.py}: Makes \texttt{src} a Python package, enabling imports
+    \item \texttt{src/config.py}: Centralizes all configuration settings including:
+    \begin{itemize}
+        \item API keys (Alpha Vantage)
+        \item Dagshub credentials
+        \item MLflow tracking URI
+        \item Data directory paths
+        \item Model configuration (random state, test size)
+        \item Data quality thresholds
+        \item Monitoring ports
+    \end{itemize}
+\end{itemize}
+
+\subsection{Directory Structure}
+\begin{verbatim}
+MLOps-Stock-Prediction/
+├── src/
+│   ├── __init__.py
+│   └── config.py
+├── data/
+│   ├── raw/          (for raw data files)
+│   └── processed/    (for processed data files)
+├── models/           (for trained models)
+├── airflow/
+│   ├── dags/         (for Airflow DAG files)
+│   ├── logs/         (for Airflow logs)
+│   └── plugins/      (for Airflow plugins)
+├── docker/           (for Docker files)
+├── tests/            (for test files)
+└── monitoring/       (for monitoring configs)
+\end{verbatim}
+
+\newpage
+
+\section{Step 4: Python Dependencies Setup}
+
+\subsection{Objective}
+Define all Python package dependencies required for the project.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{requirements.txt} - Python package dependencies list
+\end{itemize}
+
+\subsection{File Contents}
+The \texttt{requirements.txt} includes:
+\begin{itemize}
+    \item \textbf{Core ML Libraries}: pandas ($\geq$2.0.0, $<$2.2.0), numpy ($\geq$1.24.0, $<$1.27.0), scikit-learn ($\geq$1.3.0)
+    \item \textbf{API and Web Framework}: requests ($\geq$2.31.0), fastapi ($\geq$0.100.0), uvicorn ($\geq$0.23.0), pydantic ($\geq$2.0.0, $<$2.6.0)
+    \item \textbf{MLOps Tools}: mlflow ($\geq$2.8.0), dvc ($\geq$3.42.0), dvc[s3] ($\geq$3.42.0), boto3 ($\geq$1.28.0)
+    \item \textbf{Monitoring}: prometheus-client ($\geq$0.17.0)
+    \item \textbf{Data Quality}: ydata-profiling ($\geq$4.0.0), great-expectations ($\geq$0.18.0)
+    \item \textbf{Utilities}: python-dotenv ($\geq$1.0.0), pytest ($\geq$7.4.0), flake8 ($\geq$6.0.0), joblib ($\geq$1.3.0)
+\end{itemize}
+
+\subsection{Important Notes}
+\begin{itemize}
+    \item Version constraints are set for Python 3.8 compatibility (Airflow 2.7.0 uses Python 3.8)
+    \item \texttt{apache-airflow} is NOT included as it's part of the base Docker image
+    \item \texttt{pandas-profiling} is replaced with \texttt{ydata-profiling} (deprecated)
+\end{itemize}
+
+\subsection{Issues Encountered and Solutions}
+
+\subsubsection{Issue 1: Python Version Compatibility}
+\textbf{Problem}: Initial requirements.txt had versions incompatible with Python 3.8 (used in Airflow Docker image).
+
+\textbf{Solution}: Updated package versions to be compatible with Python 3.8:
+\begin{itemize}
+    \item pandas: Changed to $\geq$2.0.0, $<$2.2.0
+    \item numpy: Changed to $\geq$1.24.0, $<$1.27.0
+    \item scikit-learn: Changed to $\geq$1.3.0
+\end{itemize}
+
+\subsubsection{Issue 2: pandas-profiling Deprecation}
+\textbf{Problem}: \texttt{pandas-profiling} package is deprecated.
+
+\textbf{Solution}: Replaced with \texttt{ydata-profiling} ($\geq$4.0.0).
+
+\newpage
+
+\section{Step 5: Data Extraction Module}
+
+\subsection{Objective}
+Create a module to fetch stock data from Alpha Vantage API.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{src/data\_extraction.py} - Stock data extraction script
+\end{itemize}
+
+\subsection{File Purpose}
+The \texttt{src/data\_extraction.py} file:
+\begin{itemize}
+    \item Fetches intraday stock data from Alpha Vantage API
+    \item Uses TIME\_SERIES\_INTRADAY function with 60-minute intervals
+    \item Handles API rate limits and errors
+    \item Saves data to CSV format in \texttt{data/raw/} directory
+    \item Returns the file path for use in downstream tasks
+    \item Includes timestamp in filename for versioning
+\end{itemize}
+
+\subsection{Key Functions}
+\begin{itemize}
+    \item \texttt{fetch\_stock\_data()} - Main function that fetches and saves stock data
+\end{itemize}
+
+\subsection{Generated Files}
+When executed, this script generates:
+\begin{itemize}
+    \item \texttt{data/raw/stock\_data\_\{SYMBOL\}\_\{TIMESTAMP\}.csv} - Raw stock data CSV file
+\end{itemize}
+
+\subsection{Issues Encountered and Solutions}
+
+\subsubsection{Issue 1: API Rate Limits}
+\textbf{Problem}: Using \texttt{outputsize='full'} hit API rate limits on free tier.
+
+\textbf{Solution}: Changed to \texttt{outputsize='compact'} which returns last 100 data points (free tier compatible).
+
+\subsubsection{Issue 2: API Error Handling}
+\textbf{Problem}: API sometimes returns 'Information' key instead of data.
+
+\textbf{Solution}: Added error handling for 'Information' responses with clear error messages indicating rate limits or API key issues.
+
+\newpage
+
+\section{Step 6: Data Quality Check Module}
+
+\subsection{Objective}
+Create a module to validate data quality before processing.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{src/data\_quality\_check.py} - Data quality validation script
+\end{itemize}
+
+\subsection{File Purpose}
+The \texttt{src/data\_quality\_check.py} file performs:
+\begin{itemize}
+    \item Empty DataFrame check
+    \item Required columns validation (open, high, low, close, volume)
+    \item Null value threshold check (default: 1\%)
+    \item Negative price validation
+    \item Negative volume validation
+    \item High price $\geq$ Low price validation
+    \item Returns True if all checks pass, False otherwise
+\end{itemize}
+
+\subsection{Key Functions}
+\begin{itemize}
+    \item \texttt{check\_data\_quality(file\_path, null\_threshold)} - Validates data quality
+\end{itemize}
+
+\subsection{Usage}
+Called by Airflow DAG after data extraction to ensure data quality before transformation.
+
+\newpage
+
+\section{Step 7: Data Transformation Module}
+
+\subsection{Objective}
+Create a module for data cleaning, feature engineering, and data profiling.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{src/data\_transformation.py} - Data transformation and feature engineering script
+\end{itemize}
+
+\subsection{File Purpose}
+The \texttt{src/data\_transformation.py} file:
+\begin{itemize}
+    \item Loads raw stock data
+    \item Creates time-series features:
+    \begin{itemize}
+        \item Lag features (1h, 2h, 3h, 6h, 12h, 24h, 48h ago)
+        \item Rolling statistics (mean, std, min, max for various windows)
+        \item Price changes and percentages
+        \item High-Low range calculations
+        \item Simple Moving Averages (SMA)
+        \item Volatility calculations
+        \item Time-based features (hour, day, month, etc.)
+        \item Target variable (next hour's closing price)
+    \end{itemize}
+    \item Generates data profiling report using ydata-profiling
+    \item Saves processed data to CSV
+    \item Returns paths to processed data and profiling report
+\end{itemize}
+
+\subsection{Key Functions}
+\begin{itemize}
+    \item \texttt{create\_features(df)} - Creates all feature engineering transformations
+    \item \texttt{transform\_data(input\_path)} - Main transformation pipeline
+\end{itemize}
+
+\subsection{Generated Files}
+When executed, this script generates:
+\begin{itemize}
+    \item \texttt{data/processed/stock\_data\_processed\_\{SYMBOL\}\_\{TIMESTAMP\}.csv} - Processed data with features
+    \item \texttt{data/processed/data\_profile\_report\_\{TIMESTAMP\}.html} - Data profiling HTML report
+\end{itemize}
+
+\newpage
+
+\section{Step 8: Docker Configuration}
+
+\subsection{Objective}
+Set up Docker containers for Apache Airflow and dependencies.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{docker/Dockerfile} - Custom Docker image for Airflow with project dependencies
+    \item \texttt{docker-compose.yml} - Docker Compose configuration for all services
+    \item \texttt{.dockerignore} - Files to exclude from Docker build context
+\end{itemize}
+
+\subsection{File Purposes}
+
+\subsubsection{docker/Dockerfile}
+\begin{itemize}
+    \item Base image: \texttt{apache/airflow:2.7.0}
+    \item Installs system packages: git, curl, vim
+    \item Copies and installs Python dependencies from \texttt{requirements.txt}
+    \item Sets PYTHONPATH environment variable
+    \item Uses airflow user for security
+\end{itemize}
+
+\subsubsection{docker-compose.yml}
+Defines four services:
+\begin{enumerate}
+    \item \textbf{postgres}: PostgreSQL database for Airflow metadata
+    \begin{itemize}
+        \item Image: postgres:13
+        \item Database: airflow
+        \item User: airflow
+        \item Health check configured
+    \end{itemize}
+    \item \textbf{airflow-init}: Initialization service
+    \begin{itemize}
+        \item Runs database migrations
+        \item Creates default Airflow user
+        \item Depends on postgres being healthy
+    \end{itemize}
+    \item \textbf{airflow-webserver}: Airflow web UI
+    \begin{itemize}
+        \item Port: 8080
+        \item Depends on airflow-init completion
+        \item Health check configured
+    \end{itemize}
+    \item \textbf{airflow-scheduler}: Airflow scheduler
+    \begin{itemize}
+        \item Executes DAGs
+        \item Depends on airflow-init completion
+        \item Health check configured
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{.dockerignore}
+Excludes unnecessary files from Docker build:
+\begin{itemize}
+    \item .git, .dvc, .vscode, .idea
+    \item \_\_pycache\_\_, *.pyc, *.log, *.db
+    \item data/raw, data/processed
+    \item models/*.pkl, models/*.joblib
+    \item .env, venv, env
+\end{itemize}
+
+\subsection{Issues Encountered and Solutions}
+
+\subsubsection{Issue 1: Docker Build Timeout}
+\textbf{Problem}: Network timeout while downloading large packages during Docker build.
+
+\textbf{Solution}: Added timeout and retry parameters to pip install:
+\begin{verbatim}
+pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt
+\end{verbatim}
+
+\subsubsection{Issue 2: Airflow Initialization Failure}
+\textbf{Problem}: \texttt{airflow-init} service failed with "Too old Airflow version" error.
+
+\textbf{Solution}: 
+\begin{itemize}
+    \item Changed \texttt{airflow-init} to use base \texttt{apache/airflow:2.7.0} image directly
+    \item Removed custom build for init service
+    \item Relied on Airflow's built-in entrypoint for initialization
+\end{itemize}
+
+\subsubsection{Issue 3: PostgreSQL Connection Error}
+\textbf{Problem}: \texttt{airflow-init} couldn't connect to PostgreSQL (service not ready).
+
+\textbf{Solution}: Added \texttt{depends\_on} with \texttt{condition: service\_healthy} to ensure PostgreSQL is ready before initialization.
+
+\subsubsection{Issue 4: DAG Not Appearing in UI}
+\textbf{Problem}: DAG file not discovered by Airflow scheduler after 7+ minutes.
+
+\textbf{Solution}:
+\begin{itemize}
+    \item Added explicit volume mount: \texttt{./airflow/dags:/opt/airflow/dags}
+    \item Set environment variable: \texttt{AIRFLOW\_\_CORE\_\_DAGS\_FOLDER: /opt/airflow/dags}
+    \item Fixed project root path in DAG file to \texttt{/opt/airflow}
+\end{itemize}
+
+\subsection{Commands Executed}
+\begin{verbatim}
+docker-compose build --no-cache
+docker-compose up airflow-init
+docker-compose up -d
+docker-compose logs airflow-scheduler
+docker-compose exec airflow-scheduler airflow dags list
+\end{verbatim}
+
+\newpage
+
+\section{Step 9: Airflow DAG Creation}
+
+\subsection{Objective}
+Create Apache Airflow DAG to orchestrate the entire ETL and ML pipeline.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{airflow/dags/stock\_prediction\_dag.py} - Main Airflow DAG definition
+\end{itemize}
+
+\subsection{File Purpose}
+The \texttt{airflow/dags/stock\_prediction\_dag.py} file defines:
+\begin{itemize}
+    \item DAG configuration (schedule, catchup, tags)
+    \item Five tasks in sequence:
+    \begin{enumerate}
+        \item \textbf{extract\_data}: Extracts stock data from Alpha Vantage API
+        \item \textbf{data\_quality\_check}: Validates data quality
+        \item \textbf{transform\_data}: Transforms data and creates features
+        \item \textbf{version\_with\_dvc}: Versions data using DVC
+        \item \textbf{train\_model}: Trains ML model
+    \end{enumerate}
+    \item Task dependencies: extract $\rightarrow$ quality\_check $\rightarrow$ transform $\rightarrow$ dvc\_version $\rightarrow$ train\_model
+    \item XCom communication between tasks
+\end{itemize}
+
+\subsection{DAG Configuration}
+\begin{itemize}
+    \item \textbf{DAG ID}: stock\_prediction\_pipeline
+    \item \textbf{Schedule}: @daily (runs once per day at midnight)
+    \item \textbf{Catchup}: False (doesn't backfill past dates)
+    \item \textbf{Owner}: mlops\_team
+    \item \textbf{Retries}: 1
+    \item \textbf{Retry Delay}: 5 minutes
+\end{itemize}
+
+\subsection{Task Details}
+
+\subsubsection{Task 1: extract\_data}
+\begin{itemize}
+    \item Type: PythonOperator
+    \item Function: \texttt{extract\_task()}
+    \item Calls: \texttt{src.data\_extraction.fetch\_stock\_data()}
+    \item Returns: File path to raw CSV data
+\end{itemize}
+
+\subsubsection{Task 2: data\_quality\_check}
+\begin{itemize}
+    \item Type: PythonOperator
+    \item Function: \texttt{quality\_check\_task(**context)}
+    \item Calls: \texttt{src.data\_quality\_check.check\_data\_quality()}
+    \item Retrieves: File path from extract\_data task via XCom
+    \item Raises: ValueError if quality check fails
+\end{itemize}
+
+\subsubsection{Task 3: transform\_data}
+\begin{itemize}
+    \item Type: PythonOperator
+    \item Function: \texttt{transform\_task(**context)}
+    \item Calls: \texttt{src.data\_transformation.transform\_data()}
+    \item Retrieves: File path from data\_quality\_check task via XCom
+    \item Returns: Dictionary with processed\_data\_path and report\_path
+\end{itemize}
+
+\subsubsection{Task 4: version\_with\_dvc}
+\begin{itemize}
+    \item Type: PythonOperator
+    \item Function: \texttt{dvc\_version\_task(**context)}
+    \item Operations:
+    \begin{itemize}
+        \item Adds processed data to DVC: \texttt{dvc add \{processed\_data\_path\}}
+        \item Stages DVC metadata files: \texttt{git add *.dvc .dvc/config}
+        \item Commits to Git: \texttt{git commit -m "Update data version"}
+        \item Pushes data to AWS S3: \texttt{dvc push --remote myremote}
+        \item Falls back to Dagshub if S3 push fails
+    \end{itemize}
+    \item Retrieves: Paths from transform\_data task via XCom
+    \item Remote Storage: AWS S3 (\texttt{s3://mlops-stock-prediction-data/dvc-storage})
+    \item Includes retry logic and error handling for cloud storage operations
+\end{itemize}
+
+\subsubsection{Task 5: train\_model}
+\begin{itemize}
+    \item Type: PythonOperator
+    \item Function: \texttt{train\_model\_task(**context)}
+    \item Executes: \texttt{src/train.py} script via subprocess
+    \item Retrieves: Processed data path from transform\_data task via XCom
+    \item Returns: Data path
+\end{itemize}
+
+\subsection{Issues Encountered and Solutions}
+
+\subsubsection{Issue 1: Import Errors}
+\textbf{Problem}: DAG couldn't import custom modules from src directory.
+
+\textbf{Solution}: Added project root to Python path:
+\begin{verbatim}
+project_root = Path('/opt/airflow')
+sys.path.insert(0, str(project_root))
+\end{verbatim}
+
+\subsubsection{Issue 2: XCom Data Retrieval}
+\textbf{Problem}: Tasks couldn't retrieve data from previous tasks.
+
+\textbf{Solution}: Used Airflow's XCom pull:
+\begin{verbatim}
+data_path = ti.xcom_pull(task_ids='extract_data')
+\end{verbatim}
+
+\subsubsection{Issue 3: Schedule Interval Deprecation}
+\textbf{Problem}: \texttt{schedule\_interval} parameter deprecated in Airflow 2.x.
+
+\textbf{Solution}: Changed to \texttt{schedule='@daily'} instead of \texttt{schedule\_interval='@daily'}.
+
+\newpage
+
+\section{Step 10: Model Training Module}
+
+\subsection{Objective}
+Create a script to train machine learning models with MLflow experiment tracking.
+
+\subsection{Files Created}
+\begin{itemize}
+    \item \texttt{src/train.py} - Model training script with MLflow integration
+\end{itemize}
+
+\subsection{File Purpose}
+The \texttt{src/train.py} file:
+\begin{itemize}
+    \item Loads processed data with features
+    \item Splits data into train/test sets (80/20, no shuffle for time series)
+    \item Trains RandomForestRegressor model
+    \item Calculates metrics: RMSE, MAE, R²
+    \item Logs everything to MLflow:
+    \begin{itemize}
+        \item Model parameters (n\_estimators, max\_depth, etc.)
+        \item Training and test metrics
+        \item Model artifact
+        \item Feature importance CSV
+    \end{itemize}
+    \item Saves model locally as pickle file
+    \item Returns model file path
+\end{itemize}
+
+\subsection{Key Functions}
+\begin{itemize}
+    \item \texttt{train\_model(data\_path)} - Main training function
+\end{itemize}
+
+\subsection{Model Configuration}
+\begin{itemize}
+    \item \textbf{Algorithm}: RandomForestRegressor
+    \item \textbf{n\_estimators}: 100
+    \item \textbf{max\_depth}: 10
+    \item \textbf{min\_samples\_split}: 2
+    \item \textbf{min\_samples\_leaf}: 1
+    \item \textbf{random\_state}: 42
+    \item \textbf{test\_size}: 0.2 (20\%)
+\end{itemize}
+
+\subsection{Generated Files}
+When executed, this script generates:
+\begin{itemize}
+    \item \texttt{models/stock\_model.pkl} - Trained model pickle file
+    \item \texttt{models/feature\_importance.csv} - Feature importance rankings
+\end{itemize}
+
+\subsection{MLflow Integration}
+\begin{itemize}
+    \item Tracking URI: Configured from \texttt{src/config.py}
+    \item Run name: \texttt{stock\_prediction\_\{TIMESTAMP\}}
+    \item Logged parameters: All model hyperparameters and data statistics
+    \item Logged metrics: train\_rmse, test\_rmse, train\_mae, test\_mae, train\_r2, test\_r2
+    \item Logged artifacts: Model file, feature importance CSV
+\end{itemize}
+
+\subsection{Issues Encountered and Solutions}
+
+\subsubsection{Issue 1: Missing Training Script}
+\textbf{Problem}: DAG task failed because \texttt{src/train.py} didn't exist.
+
+\textbf{Solution}: Created complete training script with MLflow integration.
+
+\subsubsection{Issue 2: Path Resolution}
+\textbf{Problem}: Training script couldn't find data file path.
+
+\textbf{Solution}: Fixed project root path in DAG to \texttt{/opt/airflow} and ensured proper path handling.
+
+\subsection{Commands Executed}
+\begin{verbatim}
+docker-compose exec airflow-scheduler python src/train.py \
+    data/processed/stock_data_processed_20251126_192923.csv
+\end{verbatim}
+
+\newpage
+
+\section{Step 11: Git Repository Management}
+
+\subsection{Objective}
+Commit all project files to Git repository and prepare for version control.
+
+\subsection{Files Added to Git}
+\begin{itemize}
+    \item \texttt{.gitignore} - Git ignore patterns
+    \item \texttt{.dockerignore} - Docker ignore patterns
+    \item \texttt{requirements.txt} - Python dependencies
+    \item \texttt{docker-compose.yml} - Docker Compose configuration
+    \item \texttt{docker/Dockerfile} - Docker image definition
+    \item \texttt{src/\_\_init\_\_.py} - Source package marker
+    \item \texttt{src/config.py} - Configuration module
+    \item \texttt{src/data\_extraction.py} - Data extraction script
+    \item \texttt{src/data\_quality\_check.py} - Data quality validation
+    \item \texttt{src/data\_transformation.py} - Data transformation script
+    \item \texttt{src/train.py} - Model training script
+    \item \texttt{airflow/dags/stock\_prediction\_dag.py} - Airflow DAG
+\end{itemize}
+
+\subsection{Files Excluded from Git}
+\begin{itemize}
+    \item \texttt{.env} - Environment variables (contains secrets)
+    \item \texttt{data/raw/*.csv} - Raw data files (tracked by DVC)
+    \item \texttt{data/processed/*.csv} - Processed data files (tracked by DVC)
+    \item \texttt{models/*.pkl} - Model files (tracked by DVC)
+    \item \texttt{airflow/logs/} - Airflow log files
+    \item \texttt{airflow/airflow.db} - Airflow metadata database
+    \item \texttt{airflow/airflow.cfg} - Airflow configuration (generated)
+    \item \texttt{airflow-webserver.pid} - Process ID file
+    \item \texttt{webserver\_config.py} - Generated webserver config
+    \item \texttt{\_\_pycache\_\_/} - Python cache directories
+    \item \texttt{*.pyc} - Compiled Python files
+\end{itemize}
+
+\subsection{Commands Executed}
+\begin{verbatim}
+git add .gitignore
+git add .dockerignore
+git add requirements.txt
+git add docker-compose.yml
+git add docker/Dockerfile
+git add src/
+git add airflow/dags/
+git commit -m "Initial project setup"
+git commit -m "Add data extraction module"
+git commit -m "Add data quality check module"
+git commit -m "Add data transformation module"
+git commit -m "Add Docker configuration"
+git commit -m "Add Airflow DAG"
+git commit -m "Add model training script"
+git commit -m "Update gitignore and clean up unnecessary files"
+\end{verbatim}
+
+\subsection{Cleanup Performed}
+Removed unnecessary files and directories:
+\begin{itemize}
+    \item \texttt{airflow-webserver.pid}
+    \item \texttt{webserver\_config.py}
+    \item \texttt{airflow.cfg} (root directory duplicate)
+    \item \texttt{dags/} (root directory duplicate)
+    \item \texttt{logs/} (root directory duplicate)
+    \item \texttt{plugins/} (root directory duplicate)
+\end{itemize}
+
+\newpage
+
+\section{Complete File Structure}
+
+\subsection{Final Project Structure}
+\begin{verbatim}
+MLOps-Stock-Prediction/
+├── .git/
+├── .gitignore
+├── .dockerignore
+├── .env                    (not in Git)
+├── requirements.txt
+├── docker-compose.yml
+├── docker/
+│   └── Dockerfile
+├── src/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── data_extraction.py
+│   ├── data_quality_check.py
+│   ├── data_transformation.py
+│   └── train.py
+├── airflow/
+│   ├── dags/
+│   │   └── stock_prediction_dag.py
+│   ├── logs/              (not in Git)
+│   ├── plugins/
+│   ├── airflow.db         (not in Git)
+│   └── airflow.cfg        (not in Git)
+├── data/
+│   ├── raw/               (DVC tracked)
+│   │   └── stock_data_*.csv
+│   └── processed/         (DVC tracked)
+│       ├── stock_data_processed_*.csv
+│       └── data_profile_report_*.html
+├── models/                (DVC tracked)
+│   ├── stock_model.pkl
+│   └── feature_importance.csv
+├── tests/
+├── monitoring/
+└── MLOps_Project_Documentation.tex
+\end{verbatim}
+
+\newpage
+
+\section{Data Flow Summary}
+
+\subsection{Pipeline Flow}
+\begin{enumerate}
+    \item \textbf{Data Extraction} (\texttt{src/data\_extraction.py})
+    \begin{itemize}
+        \item Input: Alpha Vantage API
+        \item Output: \texttt{data/raw/stock\_data\_\{SYMBOL\}\_\{TIMESTAMP\}.csv}
+    \end{itemize}
+    
+    \item \textbf{Data Quality Check} (\texttt{src/data\_quality\_check.py})
+    \begin{itemize}
+        \item Input: Raw CSV file
+        \item Output: Validation result (True/False)
+    \end{itemize}
+    
+    \item \textbf{Data Transformation} (\texttt{src/data\_transformation.py})
+    \begin{itemize}
+        \item Input: Raw CSV file
+        \item Output: 
+        \begin{itemize}
+            \item \texttt{data/processed/stock\_data\_processed\_\{SYMBOL\}\_\{TIMESTAMP\}.csv}
+            \item \texttt{data/processed/data\_profile\_report\_\{TIMESTAMP\}.html}
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Data Versioning} (DVC with AWS S3)
+    \begin{itemize}
+        \item Input: Processed CSV and HTML report
+        \item Output: 
+        \begin{itemize}
+            \item DVC tracked files (.dvc files) - committed to Git
+            \item Actual data files - pushed to AWS S3 bucket
+        \end{itemize}
+        \item Remote Storage: AWS S3 bucket (\texttt{mlops-stock-prediction-data})
+        \item Storage Path: \texttt{s3://mlops-stock-prediction-data/dvc-storage/}
+    \end{itemize}
+    
+    \item \textbf{Model Training} (\texttt{src/train.py})
+    \begin{itemize}
+        \item Input: Processed CSV file
+        \item Output:
+        \begin{itemize}
+            \item \texttt{models/stock\_model.pkl}
+            \item \texttt{models/feature\_importance.csv}
+            \item MLflow experiment run (logged to Dagshub)
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+\section{Key Commands Reference}
+
+\subsection{Docker Commands}
+\begin{verbatim}
+# Build Docker images
+docker-compose build --no-cache
+
+# Initialize Airflow database
+docker-compose up airflow-init
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs airflow-scheduler
+docker-compose logs airflow-webserver
+
+# Execute commands in container
+docker-compose exec airflow-scheduler bash
+docker-compose exec airflow-scheduler python src/train.py <data_path>
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+\end{verbatim}
+
+\subsection{Airflow Commands}
+\begin{verbatim}
+# List DAGs
+docker-compose exec airflow-scheduler airflow dags list
+
+# Trigger DAG manually
+docker-compose exec airflow-scheduler airflow dags trigger \
+    stock_prediction_pipeline
+
+# Check DAG status
+docker-compose exec airflow-scheduler airflow dags show \
+    stock_prediction_pipeline
+\end{verbatim}
+
+\subsection{Git Commands}
+\begin{verbatim}
+# Check status
+git status
+
+# Add files
+git add <file>
+git add -A
+
+# Commit changes
+git commit -m "message"
+
+# Push to remote
+git push origin dev
+\end{verbatim}
+
+\newpage
+
+\section{Troubleshooting Guide}
+
+\subsection{Common Issues and Solutions}
+
+\subsubsection{Issue: DAG Not Appearing in Airflow UI}
+\textbf{Symptoms}: DAG file exists but doesn't show in Airflow web UI.
+
+\textbf{Solutions}:
+\begin{enumerate}
+    \item Verify DAG file is in correct location: \texttt{airflow/dags/}
+    \item Check volume mount in \texttt{docker-compose.yml}: \texttt{./airflow/dags:/opt/airflow/dags}
+    \item Verify DAG folder environment variable: \texttt{AIRFLOW\_\_CORE\_\_DAGS\_FOLDER}
+    \item Check scheduler logs: \texttt{docker-compose logs airflow-scheduler}
+    \item Ensure no syntax errors in DAG file
+    \item Restart scheduler: \texttt{docker-compose restart airflow-scheduler}
+\end{enumerate}
+
+\subsubsection{Issue: Import Errors in DAG}
+\textbf{Symptoms}: DAG fails with "ModuleNotFoundError".
+
+\textbf{Solutions}:
+\begin{enumerate}
+    \item Verify project root path: \texttt{project\_root = Path('/opt/airflow')}
+    \item Add to Python path: \texttt{sys.path.insert(0, str(project\_root))}
+    \item Ensure \texttt{src/} directory is mounted in Docker
+    \item Check PYTHONPATH environment variable in \texttt{docker-compose.yml}
+\end{enumerate}
+
+\subsubsection{Issue: API Rate Limits}
+\textbf{Symptoms}: Alpha Vantage API returns error or 'Information' message.
+
+\textbf{Solutions}:
+\begin{enumerate}
+    \item Use \texttt{outputsize='compact'} instead of 'full'
+    \item Wait between API calls (free tier: 5 calls/minute)
+    \item Check API key validity
+    \item Consider upgrading to premium API key for higher limits
+\end{enumerate}
+
+\subsubsection{Issue: Docker Build Timeout}
+\textbf{Symptoms}: Docker build fails with timeout errors.
+
+\textbf{Solutions}:
+\begin{enumerate}
+    \item Increase pip timeout: \texttt{--timeout=300}
+    \item Add retries: \texttt{--retries=5}
+    \item Upgrade pip first: \texttt{pip install --upgrade pip setuptools wheel}
+    \item Use \texttt{--no-cache-dir} to avoid cache issues
+\end{enumerate}
+
+\subsubsection{Issue: PostgreSQL Connection Error}
+\textbf{Symptoms}: \texttt{airflow-init} fails to connect to PostgreSQL.
+
+\textbf{Solutions}:
+\begin{enumerate}
+    \item Add \texttt{depends\_on} with \texttt{condition: service\_healthy}
+    \item Verify PostgreSQL health check configuration
+    \item Check network connectivity between containers
+    \item Ensure PostgreSQL service starts before airflow-init
+\end{enumerate}
+
+\subsubsection{Issue: MLflow Connection Error}
+\textbf{Symptoms}: Model training fails to log to MLflow.
+
+\textbf{Solutions}:
+\begin{enumerate}
+    \item Verify MLFLOW\_TRACKING\_URI in \texttt{.env} file
+    \item Check Dagshub credentials (username and token)
+    \item Ensure network access to Dagshub
+    \item Verify MLflow package is installed: \texttt{pip list | grep mlflow}
+\end{enumerate}
+
+\newpage
+
+\section{Summary}
+
+\subsection{Project Completion Status (Phase 2 Complete)}
+\begin{itemize}
+    \item[$\checkmark$] Project initialization and structure setup
+    \item[$\checkmark$] Environment configuration
+    \item[$\checkmark$] Source code modules creation
+    \item[$\checkmark$] Python dependencies setup
+    \item[$\checkmark$] Data extraction module
+    \item[$\checkmark$] Data quality check module
+    \item[$\checkmark$] Data transformation module
+    \item[$\checkmark$] Docker configuration
+    \item[$\checkmark$] Airflow DAG creation
+    \item[$\checkmark$] Model training module
+    \item[$\checkmark$] DVC remote storage configuration (AWS S3)
+    \item[$\checkmark$] Data versioning with cloud storage integration
+    \item[$\checkmark$] Git repository setup
+    \item[$\checkmark$] Documentation
+\end{itemize}
+
+\subsection{Key Achievements}
+\begin{enumerate}
+    \item Successfully implemented end-to-end MLOps pipeline
+    \item Integrated Alpha Vantage API for data extraction
+    \item Implemented data quality checks and transformations
+    \item Set up Apache Airflow for workflow orchestration
+    \item Configured MLflow for experiment tracking
+    \item Created Docker-based deployment environment
+    \item Established proper version control practices with DVC
+    \item Configured AWS S3 as cloud storage for large data files
+    \item Successfully migrated from Google Drive to AWS S3 after overcoming multiple challenges
+    \item Implemented automated data versioning with cloud storage push
+\end{enumerate}
+
+\subsection{Next Steps (Future Work)}
+\begin{itemize}
+    \item Implement CI/CD pipeline with GitHub Actions
+    \item Set up model deployment with FastAPI
+    \item Configure Prometheus and Grafana for monitoring
+    \item Add more sophisticated feature engineering
+    \item Implement model evaluation and comparison
+    \item Set up automated retraining pipeline
+    \item Add data drift detection
+    \item Implement A/B testing framework
+\end{itemize}
+
+\newpage
+
+\section{Appendix: File Reference Table}
+
+\begin{longtable}{|p{3cm}|p{4cm}|p{7cm}|}
+\hline
+\textbf{File Name} & \textbf{Step Created} & \textbf{Purpose} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{File Name} & \textbf{Step Created} & \textbf{Purpose} \\
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
+.gitignore & Step 1 & Git ignore patterns for Python, data, models, Airflow files \\
+\hline
+.env & Step 2 & Environment variables for API keys and credentials (not in Git) \\
+\hline
+src/\_\_init\_\_.py & Step 3 & Python package marker for src directory \\
+\hline
+src/config.py & Step 3 & Centralized configuration for API keys, paths, MLflow settings \\
+\hline
+requirements.txt & Step 4 & Python package dependencies list \\
+\hline
+src/data\_extraction.py & Step 5 & Fetches stock data from Alpha Vantage API \\
+\hline
+src/data\_quality\_check.py & Step 6 & Validates data quality before processing \\
+\hline
+src/data\_transformation.py & Step 7 & Transforms data and creates features \\
+\hline
+docker/Dockerfile & Step 8 & Custom Docker image for Airflow with dependencies \\
+\hline
+docker-compose.yml & Step 8 & Docker Compose configuration for all services \\
+\hline
+.dockerignore & Step 8 & Files to exclude from Docker build context \\
+\hline
+airflow/dags/stock\_prediction\_dag.py & Step 9 & Airflow DAG orchestrating entire pipeline \\
+\hline
+src/train.py & Step 10 & Model training script with MLflow integration \\
+\hline
+.dvc/config & Step 11 & DVC remote storage configuration (AWS S3) \\
+\hline
+.dvc/config.local & Step 11 & DVC local configuration (Dagshub credentials) \\
+\hline
+data/raw/stock\_data\_*.csv & Step 5 (Generated) & Raw stock data from API \\
+\hline
+data/processed/stock\_data\_processed\_*.csv & Step 7 (Generated) & Processed data with features \\
+\hline
+data/processed/data\_profile\_report\_*.html & Step 7 (Generated) & Data profiling HTML report \\
+\hline
+data/processed/*.dvc & Step 11 (Generated) & DVC metadata files (tracked in Git) \\
+\hline
+models/stock\_model.pkl & Step 10 (Generated) & Trained machine learning model \\
+\hline
+models/feature\_importance.csv & Step 10 (Generated) & Feature importance rankings \\
+\hline
+
+\end{longtable}
+
+\end{document}
+
