@@ -877,21 +877,462 @@ docker-compose exec airflow-scheduler airflow dags show \
     stock_prediction_pipeline
 \end{verbatim}
 
-\subsection{Git Commands}
+\subsection{Git Commands for Branching and PR Workflow}
+
+\subsubsection{Basic Git Commands}
 \begin{verbatim}
-# Check status
+# Check current status
 git status
 
-# Add files
-git add <file>
+# Check which branch you're on
+git branch
+
+# View all branches (local and remote)
+git branch -a
+
+# Check commit history
+git log --oneline -10
+git log --oneline --graph --all -10
+\end{verbatim}
+
+\subsubsection{Branching Commands}
+
+\textbf{Create and Switch Branches}:
+\begin{verbatim}
+# Create new feature branch from dev
+git checkout dev
+git pull origin dev
+git checkout -b feature/your-feature-name
+
+# Switch to existing branch
+git checkout dev
+git checkout test
+git checkout main
+
+# Create branch from specific commit
+git checkout -b feature/new-feature <commit-hash>
+\end{verbatim}
+
+\textbf{View Branch Status}:
+\begin{verbatim}
+# See which commits are ahead/behind
+git log origin/main..origin/dev --oneline    # Commits in dev not in main
+git log origin/dev..origin/main --oneline    # Commits in main not in dev
+
+# Compare branches
+git diff dev..main
+git diff dev..test
+\end{verbatim}
+
+\subsubsection{Committing Changes}
+
+\textbf{Standard Commit Workflow}:
+\begin{verbatim}
+# Stage specific files
+git add src/config.py
+git add .github/workflows/ci-dev-to-test.yml
+
+# Stage all changes
 git add -A
+# OR
+git add .
 
-# Commit changes
-git commit -m "message"
+# Commit with message
+git commit -m "fix: add AWS credentials to DVC pull step"
 
-# Push to remote
+# Commit with detailed message
+git commit -m "fix: add AWS credentials to DVC pull step
+
+- Added AWS_ACCESS_KEY_ID to workflow environment
+- Added AWS_SECRET_ACCESS_KEY to workflow environment
+- Added AWS_DEFAULT_REGION for S3 access"
+\end{verbatim}
+
+\textbf{Commit Message Conventions}:
+\begin{itemize}
+    \item \texttt{feat:} - New feature
+    \item \texttt{fix:} - Bug fix
+    \item \texttt{docs:} - Documentation changes
+    \item \texttt{test:} - Adding or updating tests
+    \item \texttt{refactor:} - Code refactoring
+    \item \texttt{chore:} - Maintenance tasks
+\end{itemize}
+
+\subsubsection{Pushing and Pulling}
+
+\textbf{Push to Remote}:
+\begin{verbatim}
+# Push current branch to remote
+git push origin feature/your-feature-name
+
+# Push and set upstream
+git push -u origin feature/your-feature-name
+
+# Push all branches
+git push --all origin
+
+# Force push (use with caution!)
+git push origin branch-name --force
+\end{verbatim}
+
+\textbf{Pull from Remote}:
+\begin{verbatim}
+# Pull latest changes
+git pull origin dev
+
+# Fetch without merging
+git fetch origin
+
+# Pull specific branch
+git pull origin main
+\end{verbatim}
+
+\subsubsection{Complete PR Workflow Commands}
+
+\textbf{PR \#1: Feature → Dev}
+
+\begin{verbatim}
+# Step 1: Start from dev branch
+git checkout dev
+git pull origin dev
+
+# Step 2: Create feature branch
+git checkout -b feature/new-feature
+
+# Step 3: Make your changes
+# Edit files, add code, etc.
+
+# Step 4: Commit changes
+git add .
+git commit -m "feat: add new feature description"
+
+# Step 5: Push feature branch
+git push origin feature/new-feature
+
+# Step 6: Create PR on GitHub
+# Go to GitHub → Pull Requests → New PR
+# Base: dev, Compare: feature/new-feature
+
+# Step 7: After PR is merged, clean up
+git checkout dev
+git pull origin dev
+git branch -d feature/new-feature  # Delete local branch
+git push origin --delete feature/new-feature  # Delete remote branch
+\end{verbatim}
+
+\textbf{PR \#2: Dev → Test}
+
+\begin{verbatim}
+# Step 1: Ensure dev is up to date
+git checkout dev
+git pull origin dev
+
+# Step 2: Create PR on GitHub
+# Go to GitHub → Pull Requests → New PR
+# Base: test, Compare: dev
+
+# Step 3: Wait for workflow to complete
+# - Model training runs automatically
+# - CML comparison report is posted
+# - Merge is blocked if model performs worse
+
+# Step 4: After approval, merge PR on GitHub
+# (Merge happens on GitHub, not via command line)
+
+# Step 5: Update local test branch
+git checkout test
+git pull origin test
+\end{verbatim}
+
+\subsubsection{Why Does Pushing to Test Branch Automatically Run PR \#2 Workflow?}
+
+\textbf{Understanding GitHub Actions Triggers}:
+
+The PR \#2 workflow (\texttt{ci-dev-to-test.yml}) is configured with this trigger:
+
+\begin{verbatim}
+on:
+  pull_request:
+    branches:
+      - test
+    paths:
+      - 'src/**'
+      - 'airflow/**'
+      - 'requirements.txt'
+      - '.github/workflows/**'
+\end{verbatim}
+
+\textbf{What This Means}:
+
+\begin{enumerate}
+    \item \textbf{Trigger Event}: \texttt{pull\_request} - The workflow runs when a pull request event occurs
+    
+    \item \textbf{Target Branch}: \texttt{branches: - test} - The workflow only runs for PRs that target the \texttt{test} branch
+    
+    \item \textbf{Path Filters}: The workflow only runs if changes are made to:
+    \begin{itemize}
+        \item \texttt{src/**} - Any file in src directory
+        \item \texttt{airflow/**} - Any file in airflow directory
+        \item \texttt{requirements.txt} - Dependencies file
+        \item \texttt{.github/workflows/**} - Workflow files
+    \end{itemize}
+\end{enumerate}
+
+\textbf{When Does the Workflow Run Automatically?}
+
+The workflow automatically runs in these situations:
+
+\begin{enumerate}
+    \item \textbf{When you create a PR targeting test branch}:
+    \begin{itemize}
+        \item Example: PR from \texttt{dev} → \texttt{test}
+        \item GitHub detects: "New PR targeting test branch"
+        \item Action: Workflow runs automatically
+        \item Result: Model training starts, CML report is generated
+    \end{itemize}
+    
+    \item \textbf{When you push new commits to an existing PR}:
+    \begin{itemize}
+        \item Example: PR \#2 is open, you push new commits to \texttt{dev}
+        \item GitHub detects: "New commits in PR targeting test"
+        \item Action: Workflow re-runs automatically
+        \item Result: Model is retrained with new code changes
+    \end{itemize}
+    
+    \item \textbf{When test branch is updated (re-validation)}:
+    \begin{itemize}
+        \item Example: PR \#3 merges \texttt{test} → \texttt{main}, then \texttt{test} gets new commits
+        \item GitHub detects: "test branch was updated"
+        \item Action: All open PRs targeting test are re-validated
+        \item Result: PR \#2 workflow runs again (if PR is still open)
+    \end{itemize}
+    
+    \item \textbf{When PR is reopened}:
+    \begin{itemize}
+        \item Example: PR was closed, then reopened
+        \item GitHub detects: "PR reopened targeting test"
+        \item Action: Workflow runs again
+        \item Result: Fresh model training and comparison
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Why Only Test Branch?}
+
+\begin{itemize}
+    \item \textbf{Each workflow has a specific purpose}:
+    \begin{itemize}
+        \item PR \#1 workflow: Triggers on PRs to \texttt{dev} (code quality checks - fast, ~2 minutes)
+        \item PR \#2 workflow: Triggers on PRs to \texttt{test} (model training and comparison - slower, ~10 minutes)
+        \item PR \#3 workflow: Triggers on PRs to \texttt{main} (production deployment - final step)
+    \end{itemize}
+    
+    \item \textbf{Separation of concerns}: Each branch has its own workflow
+    \begin{itemize}
+        \item \texttt{dev} branch: Code quality checks (linting, unit tests)
+        \item \texttt{test} branch: Model training and comparison (ensures model quality before production)
+        \item \texttt{main} branch: Production deployment (builds Docker image, pushes to registry)
+    \end{itemize}
+    
+    \item \textbf{Efficiency}: 
+    \begin{itemize}
+        \item Model training is expensive (takes 5-10 minutes, uses API calls)
+        \item We don't want to train models for every feature branch
+        \item Only train when code reaches \texttt{test} branch (closer to production)
+        \item This saves time and API quota
+    \end{itemize}
+    
+    \item \textbf{Quality gate}:
+    \begin{itemize}
+        \item Code must pass quality checks (PR \#1) before model training
+        \item Model must pass comparison (PR \#2) before deployment
+        \item Deployment only happens (PR \#3) after all checks pass
+    \end{itemize}
+\end{itemize}
+
+\textbf{What Happens When You Push Directly to Test Branch?}
+
+If you push directly to \texttt{test} branch (not recommended):
+
+\begin{itemize}
+    \item \textbf{No PR exists}: Workflow won't run automatically
+    \item \textbf{Why}: The workflow is configured for \texttt{pull\_request} events, not \texttt{push} events
+    \item \textbf{Solution}: Always create a PR from \texttt{dev} → \texttt{test} to trigger the workflow
+    \item \textbf{Best Practice}: Never push directly to \texttt{test} or \texttt{main} branches
+\end{itemize}
+
+\textbf{Summary}:
+
+\begin{itemize}
+    \item PR \#2 workflow runs \textbf{automatically} when:
+    \begin{itemize}
+        \item PR is created targeting \texttt{test} branch
+        \item New commits are pushed to PR targeting \texttt{test}
+        \item \texttt{test} branch is updated (re-validates open PRs)
+        \item PR is reopened after being closed
+    \end{itemize}
+    
+    \item It runs \textbf{only} for PRs targeting \texttt{test} branch
+    
+    \item It runs \textbf{only} if changes affect relevant paths (\texttt{src/}, \texttt{airflow/}, etc.)
+    
+    \item This ensures models are trained and compared before code reaches production
+    
+    \item This prevents bad models from reaching production automatically
+\end{itemize}
+
+\textbf{PR \#3: Test → Main}
+
+\begin{verbatim}
+# Step 1: Ensure test is up to date
+git checkout test
+git pull origin test
+
+# Step 2: Create PR on GitHub
+# Go to GitHub → Pull Requests → New PR
+# Base: main, Compare: test
+
+# Step 3: Wait for workflow to complete
+# - Model fetched from MLflow
+# - Docker image built
+# - Image pushed to Docker Hub
+# - Deployment verified
+
+# Step 4: After approval, merge PR on GitHub
+# (Merge happens on GitHub, not via command line)
+
+# Step 5: Update local main branch
+git checkout main
+git pull origin main
+\end{verbatim}
+
+\subsubsection{Syncing Branches}
+
+\textbf{Sync dev with main}:
+\begin{verbatim}
+git checkout dev
+git pull origin main
 git push origin dev
 \end{verbatim}
+
+\textbf{Sync feature branch with dev}:
+\begin{verbatim}
+git checkout feature/your-feature-name
+git merge dev
+# Resolve any conflicts if they occur
+git push origin feature/your-feature-name
+\end{verbatim}
+
+\textbf{Sync all branches with main}:
+\begin{verbatim}
+# Sync dev
+git checkout dev
+git pull origin main
+git push origin dev
+
+# Sync test
+git checkout test
+git pull origin main
+git push origin test
+
+# Sync feature branch
+git checkout feature/your-feature-name
+git merge main
+git push origin feature/your-feature-name
+\end{verbatim}
+
+\subsubsection{Merging and Resolving Conflicts}
+
+\textbf{Merge Branches}:
+\begin{verbatim}
+# Merge dev into current branch
+git checkout feature/your-feature-name
+git merge dev
+
+# Merge main into current branch
+git merge main
+
+# Merge with no fast-forward (creates merge commit)
+git merge --no-ff dev
+\end{verbatim}
+
+\textbf{Resolve Merge Conflicts}:
+\begin{verbatim}
+# If conflicts occur during merge:
+# 1. Git will show conflicted files
+git status
+
+# 2. Open conflicted files and resolve conflicts
+# Look for <<<<<<< HEAD markers
+
+# 3. After resolving, stage files
+git add <resolved-file>
+
+# 4. Complete the merge
+git commit -m "merge: resolve conflicts with dev"
+\end{verbatim}
+
+\subsubsection{Useful Git Commands}
+
+\textbf{Viewing History}:
+\begin{verbatim}
+# View commit history
+git log --oneline -10
+git log --oneline --graph --all -10
+
+# View changes in a file
+git log --follow -- src/config.py
+
+# View what changed in a commit
+git show <commit-hash>
+
+# Compare two commits
+git diff <commit1> <commit2>
+\end{verbatim}
+
+\textbf{Undoing Changes}:
+\begin{verbatim}
+# Discard changes in working directory
+git restore <file>
+git restore .
+
+# Unstage files (keep changes)
+git reset HEAD <file>
+
+# Undo last commit (keep changes)
+git reset --soft HEAD~1
+
+# Undo last commit (discard changes)
+git reset --hard HEAD~1
+\end{verbatim}
+
+\textbf{Stashing Changes}:
+\begin{verbatim}
+# Save changes temporarily
+git stash
+
+# List stashes
+git stash list
+
+# Apply stashed changes
+git stash apply
+
+# Apply and remove stash
+git stash pop
+
+# Delete stash
+git stash drop
+\end{verbatim}
+
+\subsubsection{Important Notes}
+
+\begin{itemize}
+    \item \textbf{Never commit directly to main}: Always use PRs
+    \item \textbf{Always pull before pushing}: \texttt{git pull} before \texttt{git push}
+    \item \textbf{Create feature branches from dev}: Start from latest dev
+    \item \textbf{Use descriptive commit messages}: Follow conventional commits
+    \item \textbf{Keep branches synced}: Regularly sync with main to avoid conflicts
+    \item \textbf{Delete merged branches}: Clean up after PRs are merged
+\end{itemize}
 
 \newpage
 

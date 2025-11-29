@@ -49,6 +49,12 @@ DATA_DRIFT_COUNTER = Counter(
     'Total number of data drift detections'
 )
 
+# Prediction requests counter (for calculating drift ratio)
+PREDICTION_REQUESTS = Counter(
+    'prediction_requests_total',
+    'Total number of prediction requests'
+)
+
 # ==================== Model Loading ====================
 model = None
 feature_names = None
@@ -195,9 +201,13 @@ async def predict(request: PredictionRequest):
         # Convert features to numpy array
         features_array = np.array(request.features).reshape(1, -1)
         
+        # Increment prediction requests counter (for drift ratio calculation)
+        PREDICTION_REQUESTS.inc()
+        
         # Check for data drift (simplified: check if features are out of expected range)
         # This is a basic implementation - can be enhanced with statistical tests
-        if detect_data_drift(features_array):
+        drift_detected = detect_data_drift(features_array)
+        if drift_detected:
             DATA_DRIFT_COUNTER.inc()
         
         # Make prediction
