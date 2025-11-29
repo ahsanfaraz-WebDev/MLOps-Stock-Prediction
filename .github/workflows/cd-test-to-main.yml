@@ -76,6 +76,18 @@ jobs:
                     print(f"Model downloaded to: {model_path / 'stock_model.pkl'}")
                 else:
                     print("Warning: No .pkl file found in downloaded artifacts")
+                
+                # Promote model to Production stage
+                if model_version.current_stage != "Production":
+                    print(f"Promoting model from {model_version.current_stage} to Production...")
+                    client.transition_model_version_stage(
+                        name=MODEL_NAME,
+                        version=model_version.version,
+                        stage="Production"
+                    )
+                    print(f"✓ Model {MODEL_NAME} version {model_version.version} promoted to Production")
+                else:
+                    print(f"Model {MODEL_NAME} version {model_version.version} is already in Production")
             else:
                 print(f"Warning: No model found in Model Registry for {MODEL_NAME}")
                 print("Will use model from previous CI step if available")
