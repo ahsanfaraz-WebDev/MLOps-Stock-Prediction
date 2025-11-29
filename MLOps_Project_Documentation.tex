@@ -10,6 +10,7 @@
 \usepackage{fancyhdr}
 \usepackage{longtable}
 \usepackage{booktabs}
+\usepackage{amssymb}
 
 \geometry{margin=1in}
 \pagestyle{fancy}
@@ -18,11 +19,38 @@
 \lhead{Complete Documentation}
 \cfoot{\thepage}
 
-\title{\textbf{MLOps Stock Prediction Project}\\
-\large Complete Implementation Documentation\\
-From Initialization to Model Training}
-\author{MLOps Team}
-\date{\today}
+% Define professional colors
+\definecolor{primaryblue}{RGB}{0,51,102}
+\definecolor{secondaryblue}{RGB}{0,102,204}
+\definecolor{accentgold}{RGB}{255,204,0}
+\definecolor{darkgray}{RGB}{64,64,64}
+
+\title{
+    \vspace{-1.5cm}
+    \centering
+    \textcolor{primaryblue}{\rule{\textwidth}{3pt}}\\[0.5cm]
+    \textcolor{primaryblue}{\textbf{\Huge MLOps Project}}\\[0.8cm]
+    \textcolor{secondaryblue}{\textbf{\Large MLOps Case Study}}\\[0.4cm]
+    \textcolor{darkgray}{\textbf{\large Building a Real-Time Predictive System (RPS)}}\\[0.6cm]
+    \textcolor{darkgray}{\large Complete Implementation Documentation}\\
+    \textcolor{darkgray}{\large From Initialization to Production Deployment}\\[0.5cm]
+    \textcolor{primaryblue}{\rule{\textwidth}{3pt}}\\[1cm]
+}
+\author{
+    \centering
+    \begin{tabular}{l}
+        \textcolor{primaryblue}{\textbf{\large Group Members:}}\\[0.3cm]
+        \textcolor{darkgray}{1. Ahsan Faraz \hspace{2cm} i228791} \\[0.2cm]
+        \textcolor{darkgray}{2. Gulsher Khan \hspace{2cm} i222637} \\[0.2cm]
+        \textcolor{darkgray}{3. Muhammad Faisal \hspace{1.5cm} i228758} \\[0.8cm]
+        \textcolor{primaryblue}{\textbf{\large Submitted To:}}\\[0.3cm]
+        \textcolor{darkgray}{Sir Pir Samiullah Shah}\\[0.8cm]
+        \textcolor{primaryblue}{\textbf{\large Institution:}}\\[0.3cm]
+        \textcolor{darkgray}{FAST National University of Computer}\\
+        \textcolor{darkgray}{and Emerging Sciences}
+    \end{tabular}
+}
+\date{\vspace{0.8cm}\centering\textcolor{darkgray}{\today}}
 
 \hypersetup{
     colorlinks=true,
@@ -39,7 +67,25 @@ From Initialization to Model Training}
 
 \begin{document}
 
+% Title Page
+\begin{titlepage}
+\centering
 \maketitle
+\thispagestyle{empty}
+\vfill
+\begin{center}
+\textcolor{secondaryblue}{\rule{0.8\textwidth}{1pt}}\\[0.5cm]
+\textcolor{darkgray}{\textit{This document contains the complete implementation documentation for the MLOps Stock Prediction Project, covering all phases from project initialization to production deployment with monitoring and observability.}}\\[0.5cm]
+\textcolor{secondaryblue}{\rule{0.8\textwidth}{1pt}}\\[0.8cm]
+\textcolor{primaryblue}{\textbf{\large Project Links:}}\\[0.4cm]
+\textcolor{secondaryblue}{\href{https://github.com/ahsanfaraz-WebDev/MLOps-Stock-Prediction.git}{\textbf{GitHub Repository}}}\\[0.2cm]
+\textcolor{secondaryblue}{\href{https://dagshub.com/ahsanfaraz-WebDev/MLOps-Stock-Prediction}{\textbf{DAGsHub Project}}}
+\end{center}
+\vfill
+\end{titlepage}
+
+% Table of Contents
+\newpage
 \tableofcontents
 \newpage
 
@@ -63,11 +109,18 @@ This document provides a comprehensive guide to the MLOps Stock Prediction Proje
     \item \textbf{Data Versioning}: DVC (Data Version Control) with AWS S3 remote storage
     \item \textbf{Cloud Storage}: AWS S3 (Amazon Simple Storage Service)
     \item \textbf{Experiment Tracking}: MLflow with Dagshub integration
+    \item \textbf{Model Registry}: MLflow Model Registry
     \item \textbf{Containerization}: Docker and Docker Compose
+    \item \textbf{CI/CD}: GitHub Actions
+    \item \textbf{Model Comparison}: CML (Continuous Machine Learning)
+    \item \textbf{API Framework}: FastAPI
+    \item \textbf{Monitoring}: Prometheus and Grafana
+    \item \textbf{Metrics}: prometheus-client
     \item \textbf{API}: Alpha Vantage Stock API
     \item \textbf{ML Framework}: scikit-learn (RandomForestRegressor)
     \item \textbf{Data Processing}: pandas, numpy
     \item \textbf{Data Quality}: ydata-profiling, great-expectations
+    \item \textbf{Container Registry}: Docker Hub
 \end{itemize}
 
 \newpage
@@ -99,9 +152,9 @@ git checkout -b dev
 \subsection{Directory Structure Created}
 \begin{verbatim}
 MLOps-Stock-Prediction/
-├── .git/
-├── .gitignore
-└── README.md (optional)
+|-- .git/
+|-- .gitignore
+`-- README.md (optional)
 \end{verbatim}
 
 \newpage
@@ -179,20 +232,20 @@ mkdir monitoring
 \subsection{Directory Structure}
 \begin{verbatim}
 MLOps-Stock-Prediction/
-├── src/
-│   ├── __init__.py
-│   └── config.py
-├── data/
-│   ├── raw/          (for raw data files)
-│   └── processed/    (for processed data files)
-├── models/           (for trained models)
-├── airflow/
-│   ├── dags/         (for Airflow DAG files)
-│   ├── logs/         (for Airflow logs)
-│   └── plugins/      (for Airflow plugins)
-├── docker/           (for Docker files)
-├── tests/            (for test files)
-└── monitoring/       (for monitoring configs)
+|-- src/
+|   |-- __init__.py
+|   `-- config.py
+|-- data/
+|   |-- raw/          (for raw data files)
+|   `-- processed/    (for processed data files)
+|-- models/           (for trained models)
+|-- airflow/
+|   |-- dags/         (for Airflow DAG files)
+|   |-- logs/         (for Airflow logs)
+|   `-- plugins/      (for Airflow plugins)
+|-- docker/           (for Docker files)
+|-- tests/            (for test files)
+`-- monitoring/       (for monitoring configs)
 \end{verbatim}
 
 \newpage
@@ -745,40 +798,40 @@ Removed unnecessary files and directories:
 \subsection{Final Project Structure}
 \begin{verbatim}
 MLOps-Stock-Prediction/
-├── .git/
-├── .gitignore
-├── .dockerignore
-├── .env                    (not in Git)
-├── requirements.txt
-├── docker-compose.yml
-├── docker/
-│   └── Dockerfile
-├── src/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── data_extraction.py
-│   ├── data_quality_check.py
-│   ├── data_transformation.py
-│   └── train.py
-├── airflow/
-│   ├── dags/
-│   │   └── stock_prediction_dag.py
-│   ├── logs/              (not in Git)
-│   ├── plugins/
-│   ├── airflow.db         (not in Git)
-│   └── airflow.cfg        (not in Git)
-├── data/
-│   ├── raw/               (DVC tracked)
-│   │   └── stock_data_*.csv
-│   └── processed/         (DVC tracked)
-│       ├── stock_data_processed_*.csv
-│       └── data_profile_report_*.html
-├── models/                (DVC tracked)
-│   ├── stock_model.pkl
-│   └── feature_importance.csv
-├── tests/
-├── monitoring/
-└── MLOps_Project_Documentation.tex
+|-- .git/
+|-- .gitignore
+|-- .dockerignore
+|-- .env                    (not in Git)
+|-- requirements.txt
+|-- docker-compose.yml
+|-- docker/
+|   `-- Dockerfile
+|-- src/
+|   |-- __init__.py
+|   |-- config.py
+|   |-- data_extraction.py
+|   |-- data_quality_check.py
+|   |-- data_transformation.py
+|   `-- train.py
+|-- airflow/
+|   |-- dags/
+|   |   `-- stock_prediction_dag.py
+|   |-- logs/              (not in Git)
+|   |-- plugins/
+|   |-- airflow.db         (not in Git)
+|   `-- airflow.cfg        (not in Git)
+|-- data/
+|   |-- raw/               (DVC tracked)
+|   |   `-- stock_data_*.csv
+|   `-- processed/         (DVC tracked)
+|       |-- stock_data_processed_*.csv
+|       `-- data_profile_report_*.html
+|-- models/                (DVC tracked)
+|   |-- stock_model.pkl
+|   `-- feature_importance.csv
+|-- tests/
+|-- monitoring/
+`-- MLOps_Project_Documentation.tex
 \end{verbatim}
 
 \newpage
@@ -1410,22 +1463,854 @@ git stash drop
 
 \newpage
 
+\section{Phase III: Continuous Integration \& Deployment (CI/CD)}
+
+\subsection{Overview}
+Phase III implements a complete CI/CD pipeline using GitHub Actions, following a strict branching model with automated checks, model training, comparison, and deployment. This phase ensures code quality, model performance validation, and automated production deployment.
+
+\subsection{Branching Model}
+The project follows a strict three-branch model:
+\begin{itemize}
+    \item \textbf{dev}: Development branch for feature integration
+    \item \textbf{test}: Staging branch for model validation
+    \item \textbf{main}: Production branch for stable releases
+\end{itemize}
+
+\textbf{Workflow}: Feature Branch → dev → test → main
+
+\subsection{PR Workflow Overview}
+
+\subsubsection{PR \#1: Feature → Dev}
+\begin{itemize}
+    \item \textbf{Trigger}: Pull request targeting \texttt{dev} branch
+    \item \textbf{Workflow}: \texttt{ci-feature-to-dev.yml}
+    \item \textbf{Actions}:
+    \begin{enumerate}
+        \item Code quality checks (Linting with flake8)
+        \item Unit tests execution (pytest)
+        \item Code coverage upload (Codecov)
+    \end{enumerate}
+    \item \textbf{Purpose}: Ensure code quality before merging to dev
+    \item \textbf{Duration}: ~2-3 minutes
+\end{itemize}
+
+\subsubsection{PR \#2: Dev → Test}
+\begin{itemize}
+    \item \textbf{Trigger}: Pull request targeting \texttt{test} branch
+    \item \textbf{Workflow}: \texttt{ci-dev-to-test.yml}
+    \item \textbf{Actions}:
+    \begin{enumerate}
+        \item Pull latest data from DVC (AWS S3)
+        \item Train new model with latest data
+        \item Compare new model with production model using CML
+        \item Post comparison report in PR comments
+        \item Block merge if new model performs worse
+    \end{enumerate}
+    \item \textbf{Purpose}: Validate model performance before production
+    \item \textbf{Duration}: ~10-15 minutes
+    \item \textbf{Model Comparison}: Uses CML (Continuous Machine Learning) to compare RMSE and R² metrics
+\end{itemize}
+
+\subsubsection{PR \#3: Test → Main}
+\begin{itemize}
+    \item \textbf{Trigger}: Pull request targeting \texttt{main} branch
+    \item \textbf{Workflow}: \texttt{cd-test-to-main.yml}
+    \item \textbf{Actions}:
+    \begin{enumerate}
+        \item Fetch best model from MLflow Model Registry
+        \item Build Docker image for FastAPI service
+        \item Push image to Docker Hub
+        \item Verify deployment (health check)
+        \item Create deployment tag
+    \end{enumerate}
+    \item \textbf{Purpose}: Deploy validated model to production
+    \item \textbf{Duration}: ~5-8 minutes
+\end{itemize}
+
+\subsection{Workflow Files Explained}
+
+\subsubsection{.github/workflows/ci-feature-to-dev.yml}
+\textbf{Purpose}: Validates code quality for feature branches merging into dev.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \textbf{Trigger}: PRs targeting \texttt{dev} branch
+    \item \textbf{Path Filters}: Only runs when \texttt{src/}, \texttt{tests/}, or \texttt{requirements.txt} change
+    \item \textbf{Steps}:
+    \begin{enumerate}
+        \item Checkout code
+        \item Set up Python 3.8
+        \item Cache pip packages for faster builds
+        \item Install dependencies (flake8, pytest, pytest-cov)
+        \item Run linting with flake8 (continues on error)
+        \item Run unit tests with pytest (continues on error)
+        \item Upload coverage to Codecov (continues on error)
+    \end{enumerate}
+    \item \textbf{Continue-on-error}: All steps continue on error to show all issues, not just the first
+\end{itemize}
+
+\textbf{Why This Workflow}:
+\begin{itemize}
+    \item Fast feedback loop (~2 minutes)
+    \item Catches syntax errors and basic bugs early
+    \item Ensures code quality before model training
+    \item Non-blocking (allows merge even with warnings)
+\end{itemize}
+
+\subsubsection{.github/workflows/ci-dev-to-test.yml}
+\textbf{Purpose}: Trains model and compares performance before allowing merge to test.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \textbf{Trigger}: PRs targeting \texttt{test} branch
+    \item \textbf{Permissions}: Requires \texttt{pull-requests: write} and \texttt{issues: write} for CML comments
+    \item \textbf{Steps}:
+    \begin{enumerate}
+        \item Checkout code and set up Python
+        \item Install dependencies including DVC and boto3
+        \item Configure AWS credentials for S3 access
+        \item Pull latest data from DVC (AWS S3)
+        \item Train model with latest data
+        \item Set up Node.js and install CML
+        \item Compare models and post report to PR
+        \item Block merge if model performance degraded
+    \end{enumerate}
+    \item \textbf{Environment Variables}:
+    \begin{itemize}
+        \item \texttt{AWS\_ACCESS\_KEY\_ID}: For DVC S3 access
+        \item \texttt{AWS\_SECRET\_ACCESS\_KEY}: For DVC S3 access
+        \item \texttt{MLFLOW\_TRACKING\_URI}: MLflow server URL
+        \item \texttt{DAGSHUB\_USERNAME}: Dagshub username
+        \item \texttt{DAGSHUB\_TOKEN}: Dagshub authentication token
+        \item \texttt{ALPHA\_VANTAGE\_KEY}: API key for data fetching
+        \item \texttt{PYTHONPATH}: Set to workspace root for module imports
+    \end{itemize}
+\end{itemize}
+
+\textbf{Model Comparison Logic}:
+\begin{itemize}
+    \item Fetches production model from MLflow Model Registry
+    \item Trains new model with latest data
+    \item Compares metrics: RMSE (lower is better) and R² (higher is better)
+    \item Calculates percentage change
+    \item Posts formatted report in PR comments using CML
+    \item Exits with error if model degraded (blocks merge)
+\end{itemize}
+
+\textbf{Why This Workflow}:
+\begin{itemize}
+    \item Ensures model quality before production
+    \item Prevents performance regression
+    \item Provides transparent model comparison
+    \item Blocks bad models automatically
+\end{itemize}
+
+\textbf{Why Only Test Branch Runs This}:
+\begin{itemize}
+    \item Model training is expensive (5-10 minutes, API calls)
+    \item We don't train for every feature branch
+    \item Only train when code reaches test (closer to production)
+    \item Saves time and API quota
+    \item Quality gate: Code must pass PR \#1 before model training
+\end{itemize}
+
+\subsubsection{.github/workflows/cd-test-to-main.yml}
+\textbf{Purpose}: Deploys validated model to production.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \textbf{Trigger}: PRs targeting \texttt{main} branch
+    \item \textbf{Steps}:
+    \begin{enumerate}
+        \item Checkout code and set up Python
+        \item Install MLflow and dependencies
+        \item Fetch best model from MLflow Model Registry
+        \item Promote model to "Production" stage if in "Staging"
+        \item Build Docker image using \texttt{docker/api/Dockerfile}
+        \item Push image to Docker Hub with version tag
+        \item Verify deployment (pull image, run container, health check)
+        \item Create deployment tag
+    \end{enumerate}
+    \item \textbf{Docker Hub Configuration}:
+    \begin{itemize}
+        \item Repository: \texttt{\$DOCKER\_HUB\_USERNAME/mlops-stock-prediction-api}
+        \item Tags: \texttt{latest} and \texttt{v\{timestamp\}}
+        \item Credentials: \texttt{DOCKER\_HUB\_USERNAME} and \texttt{DOCKER\_HUB\_TOKEN} secrets
+    \end{itemize}
+\end{itemize}
+
+\textbf{Model Registry Integration}:
+\begin{itemize}
+    \item Fetches model from MLflow Model Registry
+    \item Prefers "Production" stage, falls back to "Staging"
+    \item Automatically promotes Staging → Production on successful deployment
+    \item Downloads model artifacts to \texttt{models/} directory
+    \item Model is included in Docker image build
+\end{itemize}
+
+\textbf{Deployment Verification}:
+\begin{itemize}
+    \item Pulls built image from Docker Hub
+    \item Runs container locally in CI
+    \item Checks \texttt{/health} endpoint
+    \item Verifies service starts correctly
+    \item Creates deployment tag for tracking
+\end{itemize}
+
+\subsection{MLflow Model Registry}
+
+\subsubsection{What is MLflow Model Registry?}
+MLflow Model Registry is a centralized model store that provides:
+\begin{itemize}
+    \item \textbf{Model Versioning}: Track different versions of models
+    \item \textbf{Model Staging}: Organize models by stage (Staging, Production, Archived)
+    \item \textbf{Model Lineage}: Track which training run produced which model
+    \item \textbf{Model Metadata}: Store model metrics, parameters, and artifacts
+\end{itemize}
+
+\subsubsection{Model Stages}
+\begin{itemize}
+    \item \textbf{Staging}: Models ready for testing, deployed to test environment
+    \item \textbf{Production}: Models deployed to production, serving real traffic
+    \item \textbf{Archived}: Old models no longer in use
+\end{itemize}
+
+\subsubsection{How Models are Registered}
+\begin{enumerate}
+    \item Model training script (\texttt{src/train.py}) logs model to MLflow
+    \item Model is automatically registered with name: \texttt{stock\_prediction\_model}
+    \item Model starts in "Staging" stage
+    \item PR \#2 workflow trains model and registers it
+    \item PR \#3 workflow promotes Staging → Production on successful deployment
+\end{enumerate}
+
+\subsubsection{Model Fetching in CD Pipeline}
+\begin{verbatim}
+# Fetch production model
+client = mlflow.tracking.MlflowClient()
+prod_versions = client.get_latest_versions(
+    MODEL_NAME, 
+    stages=["Production"]
+)
+
+# If no production model, use staging
+if not prod_versions:
+    prod_versions = client.get_latest_versions(
+        MODEL_NAME, 
+        stages=["Staging"]
+    )
+
+# Download model artifacts
+mlflow.artifacts.download_artifacts(
+    artifact_uri=f"models:/{MODEL_NAME}/{version}",
+    dst_path="models"
+)
+\end{verbatim}
+
+\subsection{Docker Hub Integration}
+
+\subsubsection{What is Docker Hub?}
+Docker Hub is a cloud-based registry service for Docker images:
+\begin{itemize}
+    \item Stores Docker images
+    \item Provides image versioning
+    \item Enables image sharing and distribution
+    \item Used for production deployments
+\end{itemize}
+
+\subsubsection{Docker Hub Configuration}
+\begin{itemize}
+    \item \textbf{Repository}: \texttt{\{username\}/mlops-stock-prediction-api}
+    \item \textbf{Image Tags}:
+    \begin{itemize}
+        \item \texttt{latest}: Always points to most recent production build
+        \item \texttt{v\{timestamp\}}: Versioned tags for specific deployments
+    \end{itemize}
+    \item \textbf{Credentials}: Stored as GitHub Secrets
+    \begin{itemize}
+        \item \texttt{DOCKER\_HUB\_USERNAME}: Docker Hub username
+        \item \texttt{DOCKER\_HUB\_TOKEN}: Docker Hub access token
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Image Build Process}
+\begin{enumerate}
+    \item Dockerfile (\texttt{docker/api/Dockerfile}) defines image
+    \item CD workflow builds image with model included
+    \item Image tagged with version and "latest"
+    \item Image pushed to Docker Hub
+    \item Image can be pulled and deployed anywhere
+\end{enumerate}
+
+\subsection{FastAPI Service}
+
+\subsubsection{src/api.py}
+\textbf{Purpose}: REST API service for model serving.
+
+\textbf{Key Features}:
+\begin{itemize}
+    \item \textbf{Endpoints}:
+    \begin{itemize}
+        \item \texttt{GET /}: API information
+        \item \texttt{GET /health}: Health check endpoint
+        \item \texttt{POST /predict}: Model prediction endpoint
+        \item \texttt{GET /metrics}: Prometheus metrics endpoint (Phase IV)
+    \end{itemize}
+    \item \textbf{Model Loading}: Loads model from local \texttt{models/} directory or MLflow
+    \item \textbf{Request Validation}: Uses Pydantic models for input validation
+    \item \textbf{Error Handling}: Comprehensive error handling with HTTP status codes
+    \item \textbf{Metrics}: Prometheus metrics integration (added in Phase IV)
+\end{itemize}
+
+\textbf{Prediction Endpoint}:
+\begin{itemize}
+    \item \textbf{Input}: JSON with \texttt{features} array (6 float values)
+    \item \textbf{Output}: JSON with \texttt{prediction}, \texttt{model\_version}, \texttt{inference\_time\_ms}
+    \item \textbf{Validation}: Validates feature count matches model expectations
+    \item \textbf{Error Handling}: Returns 400 for invalid input, 500 for model errors
+\end{itemize}
+
+\subsubsection{docker/api/Dockerfile}
+\textbf{Purpose}: Docker image definition for FastAPI service.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \textbf{Base Image}: \texttt{python:3.8-slim}
+    \item \textbf{System Dependencies}: gcc (for compiling Python packages)
+    \item \textbf{Python Dependencies}: Installed from \texttt{requirements.txt}
+    \item \textbf{Optimizations}:
+    \begin{itemize}
+        \item \texttt{--prefer-binary}: Uses pre-built wheels (faster)
+        \item \texttt{--no-cache-dir}: Reduces image size
+        \item Removed duplicate \texttt{boto3} dependency (included in \texttt{dvc[s3]})
+    \end{itemize}
+    \item \textbf{Application Code}: Copies \texttt{src/} and \texttt{models/} directories
+    \item \textbf{Port}: Exposes port 8000
+    \item \textbf{Command}: Runs \texttt{uvicorn src.api:app --host 0.0.0.0 --port 8000}
+\end{itemize}
+
+\subsubsection{docker-compose.api.yml}
+\textbf{Purpose}: Docker Compose configuration for API service with monitoring.
+
+\textbf{Services}:
+\begin{enumerate}
+    \item \textbf{api}: FastAPI service
+    \begin{itemize}
+        \item Builds from \texttt{docker/api/Dockerfile}
+        \item Exposes port 8000
+        \item Mounts \texttt{models/} directory
+        \item Health check: \texttt{/health} endpoint
+    \end{itemize}
+    \item \textbf{prometheus}: Metrics collection (Phase IV)
+    \item \textbf{grafana}: Visualization dashboard (Phase IV)
+\end{enumerate}
+
+\subsection{Test Files}
+
+\subsubsection{tests/test\_api.py}
+\textbf{Purpose}: Unit tests for FastAPI endpoints.
+
+\textbf{Test Cases}:
+\begin{itemize}
+    \item Health check endpoint test
+    \item Prediction endpoint test with valid input
+    \item Prediction endpoint test with invalid input
+    \item Metrics endpoint test
+\end{itemize}
+
+\subsubsection{tests/test\_data\_quality.py}
+\textbf{Purpose}: Data quality validation tests.
+
+\textbf{Test Cases}:
+\begin{itemize}
+    \item Valid data validation
+    \item Missing columns detection
+    \item Invalid data types detection
+\end{itemize}
+
+\subsection{Common Issues and Solutions}
+
+\subsubsection{Issue: ModuleNotFoundError in Workflows}
+\textbf{Problem}: Python can't find local modules (\texttt{src/}).
+
+\textbf{Solution}: Add \texttt{PYTHONPATH: \${{ github.workspace }}} to workflow environment.
+
+\subsubsection{Issue: DVC Pull Fails}
+\textbf{Problem}: DVC can't access AWS S3.
+
+\textbf{Solution}: Add AWS credentials to workflow environment:
+\begin{verbatim}
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+\end{verbatim}
+
+\subsubsection{Issue: CML Can't Post PR Comments}
+\textbf{Problem}: "Resource not accessible by integration" error.
+
+\textbf{Solution}: Add permissions to workflow:
+\begin{verbatim}
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+\end{verbatim}
+
+\subsubsection{Issue: No Production Model Found}
+\textbf{Problem}: First run has no production model.
+
+\textbf{Solution}: Workflow falls back to "Staging" stage, then promotes to "Production" after successful deployment.
+
+\subsubsection{Issue: API Rate Limit}
+\textbf{Problem}: Alpha Vantage API rate limit exceeded.
+
+\textbf{Solution}: Workflow detects rate limit and falls back to existing data if available.
+
+\subsection{Required GitHub Secrets}
+\begin{itemize}
+    \item \texttt{AWS\_ACCESS\_KEY\_ID}: AWS S3 access key
+    \item \texttt{AWS\_SECRET\_ACCESS\_KEY}: AWS S3 secret key
+    \item \texttt{MLFLOW\_TRACKING\_URI}: MLflow server URL
+    \item \texttt{DAGSHUB\_USERNAME}: Dagshub username
+    \item \texttt{DAGSHUB\_TOKEN}: Dagshub authentication token
+    \item \texttt{ALPHA\_VANTAGE\_KEY}: Alpha Vantage API key
+    \item \texttt{DOCKER\_HUB\_USERNAME}: Docker Hub username
+    \item \texttt{DOCKER\_HUB\_TOKEN}: Docker Hub access token
+    \item \texttt{CODECOV\_TOKEN}: Codecov token (optional)
+\end{itemize}
+
+\newpage
+
+\section{Phase IV: Monitoring and Observability}
+
+\subsection{Overview}
+Phase IV implements comprehensive monitoring and observability for the MLOps Stock Prediction system using Prometheus for metrics collection and Grafana for visualization and alerting. This phase ensures the model and API remain reliable in production.
+
+\subsection{Architecture}
+
+\begin{verbatim}
+FastAPI API (Port 8000)
+    ↓ (exposes /metrics endpoint)
+Prometheus (Port 9090)
+    ↓ (scrapes metrics every 15s)
+Grafana (Port 3000)
+    ↓ (visualizes metrics)
+Dashboard & Alerts
+\end{verbatim}
+
+\subsection{Prometheus}
+
+\subsubsection{What is Prometheus?}
+Prometheus is an open-source monitoring and alerting toolkit:
+\begin{itemize}
+    \item \textbf{Data Collection}: Scrapes metrics from HTTP endpoints
+    \item \textbf{Time-Series Database}: Stores metrics over time
+    \item \textbf{Query Language}: PromQL for querying metrics
+    \item \textbf{Alerting}: Can trigger alerts based on metrics
+\end{itemize}
+
+\subsubsection{monitoring/prometheus.yml}
+\textbf{Purpose}: Prometheus configuration file.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \textbf{Global Settings}:
+    \begin{itemize}
+        \item \texttt{scrape\_interval: 15s}: How often to scrape targets
+        \item \texttt{evaluation\_interval: 15s}: How often to evaluate alert rules
+    \end{itemize}
+    \item \textbf{Scrape Configurations}:
+    \begin{enumerate}
+        \item \textbf{Prometheus itself}: \texttt{localhost:9090}
+        \item \textbf{FastAPI API}: \texttt{api:8000/metrics}
+        \begin{itemize}
+            \item Job name: \texttt{fastapi-api}
+            \item Labels: \texttt{service: stock-prediction-api}, \texttt{component: api}
+        \end{itemize}
+    \end{enumerate}
+\end{itemize}
+
+\textbf{File Location}: \texttt{monitoring/prometheus.yml}
+
+\textbf{Mount Point}: \texttt{/etc/prometheus/prometheus.yml} in Docker container
+
+\subsection{Grafana}
+
+\subsubsection{What is Grafana?}
+Grafana is an open-source analytics and visualization platform:
+\begin{itemize}
+    \item \textbf{Dashboards}: Create visual dashboards for metrics
+    \item \textbf{Data Sources}: Connect to Prometheus, databases, etc.
+    \item \textbf{Alerting}: Configure alerts based on metrics
+    \item \textbf{User-Friendly}: Web-based UI for monitoring
+\end{itemize}
+
+\subsubsection{monitoring/grafana/provisioning/datasources/prometheus.yml}
+\textbf{Purpose}: Configures Prometheus as a data source in Grafana.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \texttt{apiVersion: 1}: Grafana provisioning API version
+    \item \texttt{datasources}: List of data sources
+    \item \textbf{Prometheus Configuration}:
+    \begin{itemize}
+        \item \texttt{name: Prometheus}: Display name
+        \item \texttt{type: prometheus}: Data source type
+        \item \texttt{url: http://prometheus:9090}: Prometheus service URL
+        \item \texttt{isDefault: true}: Default data source
+        \item \texttt{access: proxy}: Access mode
+        \item \texttt{timeInterval: 15s}: Query interval
+    \end{itemize}
+\end{itemize}
+
+\textbf{File Location}: \texttt{monitoring/grafana/provisioning/datasources/prometheus.yml}
+
+\textbf{Mount Point}: \texttt{/etc/grafana/provisioning/datasources/} in Docker container
+
+\subsubsection{monitoring/grafana/provisioning/dashboards/dashboard.yml}
+\textbf{Purpose}: Configures dashboard provisioning in Grafana.
+
+\textbf{Key Components}:
+\begin{itemize}
+    \item \texttt{apiVersion: 1}: Grafana provisioning API version
+    \item \texttt{providers}: Dashboard providers configuration
+    \item \textbf{Provider Settings}:
+    \begin{itemize}
+        \item \texttt{name: MLOps Stock Prediction}: Provider name
+        \item \texttt{orgId: 1}: Organization ID
+        \item \texttt{type: file}: Load dashboards from files
+        \item \texttt{path: /etc/grafana/provisioning/dashboards}: Dashboard file location
+        \item \texttt{updateIntervalSeconds: 10}: How often to check for updates
+        \item \texttt{allowUiUpdates: true}: Allow manual dashboard edits
+    \end{itemize}
+\end{itemize}
+
+\textbf{File Location}: \texttt{monitoring/grafana/provisioning/dashboards/dashboard.yml}
+
+\textbf{Mount Point}: \texttt{/etc/grafana/provisioning/dashboards/} in Docker container
+
+\subsubsection{monitoring/grafana/provisioning/dashboards/mlops-dashboard.json}
+\textbf{Purpose}: Grafana dashboard definition with all panels and visualizations.
+
+\textbf{Dashboard Panels}:
+\begin{enumerate}
+    \item \textbf{API Request Rate}: Line graph showing requests per second by endpoint
+    \item \textbf{Inference Latency (p50, p95, p99)}: Line graph showing latency percentiles
+    \item \textbf{Total API Requests/sec}: Single stat showing current request rate
+    \item \textbf{Average Inference Latency (p50)}: Single stat showing average latency
+    \item \textbf{Data Drift Count/sec}: Single stat showing drift detection rate
+    \item \textbf{Total Predictions/sec}: Single stat showing prediction request rate
+    \item \textbf{Data Drift Ratio}: Line graph showing percentage of requests with drift
+    \item \textbf{Latency Distribution Heatmap}: Heatmap showing latency distribution over time
+\end{enumerate}
+
+\textbf{Queries Used}:
+\begin{itemize}
+    \item \texttt{rate(api\_requests\_total[5m])}: Request rate
+    \item \texttt{histogram\_quantile(0.95, rate(api\_inference\_latency\_seconds\_bucket[5m]))}: p95 latency
+    \item \texttt{rate(data\_drift\_detected\_total[5m]) / rate(prediction\_requests\_total[5m])}: Drift ratio
+\end{itemize}
+
+\textbf{File Location}: \texttt{monitoring/grafana/provisioning/dashboards/mlops-dashboard.json}
+
+\subsubsection{monitoring/README.md}
+\textbf{Purpose}: Comprehensive guide for monitoring setup and usage.
+
+\textbf{Contents}:
+\begin{itemize}
+    \item Overview of monitoring architecture
+    \item Setup instructions
+    \item Access URLs for all services
+    \item Metrics explanation
+    \item Alerting configuration guide
+    \item Troubleshooting section
+    \item Customization guide
+\end{itemize}
+
+\subsection{Metrics Implementation}
+
+\subsubsection{Service Metrics}
+\textbf{API Request Count} (\texttt{api\_requests\_total}):
+\begin{itemize}
+    \item \textbf{Type}: Counter
+    \item \textbf{Labels}: \texttt{method}, \texttt{endpoint}, \texttt{status}
+    \item \textbf{Purpose}: Track total number of API requests
+    \item \textbf{Example}: \texttt{api\_requests\_total\{method="POST",endpoint="/predict",status="200"\}}
+\end{itemize}
+
+\textbf{Inference Latency} (\texttt{api\_inference\_latency\_seconds}):
+\begin{itemize}
+    \item \textbf{Type}: Histogram
+    \item \textbf{Buckets}: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0] seconds
+    \item \textbf{Purpose}: Track prediction latency distribution
+    \item \textbf{Use Case}: Calculate p50, p95, p99 percentiles
+\end{itemize}
+
+\subsubsection{Model/Data Drift Metrics}
+\textbf{Data Drift Detections} (\texttt{data\_drift\_detected\_total}):
+\begin{itemize}
+    \item \textbf{Type}: Counter
+    \item \textbf{Purpose}: Count requests with out-of-distribution features
+    \item \textbf{Incremented}: When \texttt{detect\_data\_drift()} returns True
+\end{itemize}
+
+\textbf{Prediction Requests} (\texttt{prediction\_requests\_total}):
+\begin{itemize}
+    \item \textbf{Type}: Counter
+    \item \textbf{Purpose}: Total prediction requests made
+    \item \textbf{Use Case}: Calculate drift ratio: \texttt{drift\_detections / total\_requests}
+\end{itemize}
+
+\textbf{Data Drift Ratio}:
+\begin{itemize}
+    \item \textbf{Formula}: \texttt{rate(data\_drift\_detected\_total[5m]) / rate(prediction\_requests\_total[5m])}
+    \item \textbf{Purpose}: Percentage of requests with data drift
+    \item \textbf{Threshold}: Alert fires if ratio > 10\% for 5 minutes
+\end{itemize}
+
+\subsubsection{Data Drift Detection Logic}
+\textbf{Function}: \texttt{detect\_data\_drift(features: np.ndarray) -> bool}
+
+\textbf{Detection Rules}:
+\begin{enumerate}
+    \item \textbf{Negative Values}: If any feature < 0, drift detected
+    \item \textbf{Extreme Values}: If any feature > 1e10, drift detected
+    \item \textbf{Reason}: Stock prices and volumes should be positive and reasonable
+\end{enumerate}
+
+\textbf{Implementation Location}: \texttt{src/api.py}
+
+\subsection{API Metrics Endpoint}
+
+\subsubsection{GET /metrics}
+\textbf{Purpose}: Exposes Prometheus-formatted metrics.
+
+\textbf{Response Format}: Prometheus text format
+
+\textbf{Metrics Exposed}:
+\begin{itemize}
+    \item \texttt{api\_requests\_total}: Request counter
+    \item \texttt{api\_inference\_latency\_seconds\_bucket}: Latency histogram buckets
+    \item \texttt{api\_inference\_latency\_seconds\_count}: Total latency observations
+    \item \texttt{api\_inference\_latency\_seconds\_sum}: Sum of all latencies
+    \item \texttt{data\_drift\_detected\_total}: Drift counter
+    \item \texttt{prediction\_requests\_total}: Prediction counter
+\end{itemize}
+
+\textbf{Access}: \texttt{http://localhost:8000/metrics}
+
+\subsection{Test Scripts}
+
+\subsubsection{test\_data\_drift.ps1}
+\textbf{Purpose}: PowerShell script to test data drift detection.
+
+\textbf{Functionality}:
+\begin{enumerate}
+    \item Sends 20 prediction requests with drift (negative values)
+    \item Waits 20 seconds for Prometheus to scrape
+    \item Queries Prometheus for drift metrics
+    \item Displays:
+    \begin{itemize}
+        \item Total predictions
+        \item Drift detections
+        \item Drift ratio percentage
+    \end{itemize}
+    \item Provides next steps for alert configuration
+\end{enumerate}
+
+\textbf{Usage}:
+\begin{verbatim}
+.\test_data_drift.ps1
+\end{verbatim}
+
+\textbf{What It Tests}:
+\begin{itemize}
+    \item Data drift detection is working
+    \item Metrics are being collected
+    \item Prometheus can query metrics
+    \item Drift ratio calculation
+\end{itemize}
+
+\subsection{Alerting Configuration}
+
+\subsubsection{Alert Rules}
+Alerts are configured manually in Grafana UI (not via provisioning files due to format compatibility).
+
+\textbf{Alert 1: High Inference Latency}
+\begin{itemize}
+    \item \textbf{Name}: High Inference Latency
+    \item \textbf{Query}: \texttt{histogram\_quantile(0.95, rate(api\_inference\_latency\_seconds\_bucket[5m]))}
+    \item \textbf{Condition}: > 0.5 seconds (500ms)
+    \item \textbf{Duration}: 2 minutes
+    \item \textbf{Severity}: Warning
+    \item \textbf{Folder}: MLOps Alerts
+    \item \textbf{Labels}: \texttt{severity=warning}, \texttt{service=stock-prediction-api}
+\end{itemize}
+
+\textbf{Alert 2: Data Drift Spike}
+\begin{itemize}
+    \item \textbf{Name}: Data Drift Spike
+    \item \textbf{Query}: \texttt{(rate(data\_drift\_detected\_total[5m]) / rate(prediction\_requests\_total[5m]))}
+    \item \textbf{Condition}: > 0.1 (10\%)
+    \item \textbf{Duration}: 5 minutes
+    \item \textbf{Severity}: Critical
+    \item \textbf{Folder}: MLOps Alerts
+    \item \textbf{Labels}: \texttt{severity=critical}, \texttt{service=stock-prediction-api}
+\end{itemize}
+
+\subsubsection{Alert Configuration Steps}
+\begin{enumerate}
+    \item Open Grafana → Alerting → Alert rules
+    \item Click "New alert rule"
+    \item Configure query, condition, and duration
+    \item Set folder: "MLOps Alerts"
+    \item Add labels: \texttt{severity}, \texttt{service}, \texttt{alert\_type}
+    \item Set evaluation group: \texttt{mlops\_stock\_prediction\_alerts}
+    \item Set evaluation interval: 30s
+    \item Save rule
+\end{enumerate}
+
+\subsubsection{Notification Channels (Optional)}
+\begin{itemize}
+    \item \textbf{Slack}: Configure webhook URL in Grafana
+    \item \textbf{Email}: Configure SMTP settings
+    \item \textbf{File}: Log alerts to file (default)
+    \item \textbf{Purpose}: Receive alerts when thresholds are exceeded
+\end{itemize}
+
+\textbf{Note}: Alerting requirement is met by having alerts configured in Grafana. Slack/file logging is optional enhancement.
+
+\subsection{Docker Compose Configuration}
+
+\subsubsection{docker-compose.api.yml}
+\textbf{Purpose}: Orchestrates API, Prometheus, and Grafana services.
+
+\textbf{Services}:
+\begin{enumerate}
+    \item \textbf{api}: FastAPI service
+    \begin{itemize}
+        \item Port: 8000
+        \item Health check: \texttt{/health} endpoint
+        \item Volumes: \texttt{models/} directory
+    \end{itemize}
+    \item \textbf{prometheus}: Metrics collection
+    \begin{itemize}
+        \item Port: 9090
+        \item Config: \texttt{monitoring/prometheus.yml}
+        \item Data volume: \texttt{prometheus-data}
+        \item Retention: 30 days
+    \end{itemize}
+    \item \textbf{grafana}: Visualization
+    \begin{itemize}
+        \item Port: 3000
+        \item Default login: \texttt{admin/admin}
+        \item Provisioning: \texttt{monitoring/grafana/provisioning/}
+        \item Data volume: \texttt{grafana-data}
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Networks}: All services on \texttt{monitoring} network
+
+\textbf{Volumes}: Persistent storage for Prometheus and Grafana data
+
+\subsection{Setup and Usage}
+
+\subsubsection{Starting Services}
+\begin{verbatim}
+docker-compose -f docker-compose.api.yml up -d
+\end{verbatim}
+
+\subsubsection{Accessing Services}
+\begin{itemize}
+    \item \textbf{API}: http://localhost:8000
+    \item \textbf{Prometheus}: http://localhost:9090
+    \item \textbf{Grafana}: http://localhost:3000 (admin/admin)
+\end{itemize}
+
+\subsubsection{Generating Test Traffic}
+\begin{verbatim}
+# PowerShell
+for ($i=1; $i -le 20; $i++) {
+    $body = @{features=@(150.0, 155.0, 152.0, 155.0, 155.0, 150.0)} | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8000/predict" -Method POST -ContentType "application/json" -Body $body
+    Start-Sleep -Milliseconds 500
+}
+\end{verbatim}
+
+\subsubsection{Testing Data Drift}
+\begin{verbatim}
+.\test_data_drift.ps1
+\end{verbatim}
+
+\subsection{File Structure}
+\begin{verbatim}
+monitoring/
+|-- prometheus.yml                    # Prometheus configuration
+|-- grafana/
+|   `-- provisioning/
+|       |-- datasources/
+|       |   `-- prometheus.yml       # Prometheus datasource config
+|       `-- dashboards/
+|           |-- dashboard.yml        # Dashboard provisioning config
+|           `-- mlops-dashboard.json # Dashboard definition
+`-- README.md                         # Monitoring guide
+\end{verbatim}
+
+\subsection{Troubleshooting}
+
+\subsubsection{Prometheus Not Scraping API}
+\begin{enumerate}
+    \item Check API is running: \texttt{docker-compose ps api}
+    \item Check metrics endpoint: \texttt{curl http://localhost:8000/metrics}
+    \item Check Prometheus targets: http://localhost:9090/targets
+    \item Verify network connectivity between containers
+\end{enumerate}
+
+\subsubsection{Grafana Not Showing Data}
+\begin{enumerate}
+    \item Verify Prometheus datasource is configured
+    \item Test datasource connection in Grafana
+    \item Check time range in dashboard (use "Last 1 hour")
+    \item Verify metrics exist in Prometheus
+\end{enumerate}
+
+\subsubsection{No Metrics Appearing}
+\begin{enumerate}
+    \item Generate API traffic (make prediction requests)
+    \item Wait 15-30 seconds for Prometheus to scrape
+    \item Check Prometheus query: \texttt{api\_requests\_total}
+    \item Verify API metrics endpoint is accessible
+\end{enumerate}
+
+\newpage
+
 \section{Summary}
 
-\subsection{Project Completion Status (Phase 2 Complete)}
+\subsection{Project Completion Status (Phase 4 Complete)}
 \begin{itemize}
-    \item[$\checkmark$] Project initialization and structure setup
-    \item[$\checkmark$] Environment configuration
-    \item[$\checkmark$] Source code modules creation
-    \item[$\checkmark$] Python dependencies setup
-    \item[$\checkmark$] Data extraction module
-    \item[$\checkmark$] Data quality check module
-    \item[$\checkmark$] Data transformation module
-    \item[$\checkmark$] Docker configuration
-    \item[$\checkmark$] Airflow DAG creation
-    \item[$\checkmark$] Model training module
-    \item[$\checkmark$] DVC remote storage configuration (AWS S3)
-    \item[$\checkmark$] Data versioning with cloud storage integration
+    \item[$\checkmark$] \textbf{Phase I}: Project initialization and structure setup
+    \item[$\checkmark$] \textbf{Phase I}: Environment configuration
+    \item[$\checkmark$] \textbf{Phase I}: Source code modules creation
+    \item[$\checkmark$] \textbf{Phase I}: Python dependencies setup
+    \item[$\checkmark$] \textbf{Phase II}: Data extraction module
+    \item[$\checkmark$] \textbf{Phase II}: Data quality check module
+    \item[$\checkmark$] \textbf{Phase II}: Data transformation module
+    \item[$\checkmark$] \textbf{Phase II}: Docker configuration
+    \item[$\checkmark$] \textbf{Phase II}: Airflow DAG creation
+    \item[$\checkmark$] \textbf{Phase II}: Model training module
+    \item[$\checkmark$] \textbf{Phase II}: DVC remote storage configuration (AWS S3)
+    \item[$\checkmark$] \textbf{Phase II}: Data versioning with cloud storage integration
+    \item[$\checkmark$] \textbf{Phase III}: CI/CD pipeline with GitHub Actions
+    \item[$\checkmark$] \textbf{Phase III}: FastAPI model serving API
+    \item[$\checkmark$] \textbf{Phase III}: Docker containerization
+    \item[$\checkmark$] \textbf{Phase III}: MLflow Model Registry integration
+    \item[$\checkmark$] \textbf{Phase III}: Docker Hub deployment
+    \item[$\checkmark$] \textbf{Phase III}: CML model comparison
+    \item[$\checkmark$] \textbf{Phase IV}: Prometheus metrics collection
+    \item[$\checkmark$] \textbf{Phase IV}: Grafana dashboards and visualization
+    \item[$\checkmark$] \textbf{Phase IV}: Data drift detection and metrics
+    \item[$\checkmark$] \textbf{Phase IV}: Alerting configuration
     \item[$\checkmark$] Git repository setup
     \item[$\checkmark$] Documentation
 \end{itemize}
@@ -1442,18 +2327,28 @@ git stash drop
     \item Configured AWS S3 as cloud storage for large data files
     \item Successfully migrated from Google Drive to AWS S3 after overcoming multiple challenges
     \item Implemented automated data versioning with cloud storage push
+    \item Implemented CI/CD pipeline with GitHub Actions (Phase III)
+    \item Created FastAPI REST API for model serving (Phase III)
+    \item Integrated MLflow Model Registry for model versioning (Phase III)
+    \item Automated Docker image building and deployment (Phase III)
+    \item Implemented CML for automated model comparison (Phase III)
+    \item Set up Prometheus for metrics collection (Phase IV)
+    \item Created Grafana dashboards for monitoring (Phase IV)
+    \item Implemented data drift detection and alerting (Phase IV)
+    \item Configured comprehensive monitoring and observability (Phase IV)
 \end{enumerate}
 
 \subsection{Next Steps (Future Work)}
 \begin{itemize}
-    \item Implement CI/CD pipeline with GitHub Actions
-    \item Set up model deployment with FastAPI
-    \item Configure Prometheus and Grafana for monitoring
     \item Add more sophisticated feature engineering
-    \item Implement model evaluation and comparison
+    \item Implement advanced data drift detection (statistical tests)
     \item Set up automated retraining pipeline
-    \item Add data drift detection
     \item Implement A/B testing framework
+    \item Add model explainability (SHAP values)
+    \item Implement canary deployments
+    \item Add more comprehensive alerting (Slack, Email integration)
+    \item Scale to multiple models and services
+    \item Implement cost monitoring and optimization
 \end{itemize}
 
 \newpage
@@ -1518,6 +2413,34 @@ data/processed/*.dvc & Step 11 (Generated) & DVC metadata files (tracked in Git)
 models/stock\_model.pkl & Step 10 (Generated) & Trained machine learning model \\
 \hline
 models/feature\_importance.csv & Step 10 (Generated) & Feature importance rankings \\
+\hline
+.github/workflows/ci-feature-to-dev.yml & Phase III & CI workflow for feature → dev PRs \\
+\hline
+.github/workflows/ci-dev-to-test.yml & Phase III & CI workflow for dev → test PRs (model training) \\
+\hline
+.github/workflows/cd-test-to-main.yml & Phase III & CD workflow for test → main PRs (deployment) \\
+\hline
+src/api.py & Phase III & FastAPI REST API for model serving \\
+\hline
+docker/api/Dockerfile & Phase III & Dockerfile for FastAPI API service \\
+\hline
+docker-compose.api.yml & Phase III/IV & Docker Compose for API and monitoring services \\
+\hline
+tests/test\_api.py & Phase III & Unit tests for API endpoints \\
+\hline
+tests/test\_data\_quality.py & Phase III & Data quality validation tests \\
+\hline
+monitoring/prometheus.yml & Phase IV & Prometheus scrape configuration \\
+\hline
+monitoring/grafana/provisioning/datasources/prometheus.yml & Phase IV & Grafana Prometheus datasource config \\
+\hline
+monitoring/grafana/provisioning/dashboards/dashboard.yml & Phase IV & Grafana dashboard provisioning config \\
+\hline
+monitoring/grafana/provisioning/dashboards/mlops-dashboard.json & Phase IV & Grafana dashboard definition \\
+\hline
+monitoring/README.md & Phase IV & Monitoring setup and usage guide \\
+\hline
+test\_data\_drift.ps1 & Phase IV & PowerShell script for testing data drift detection \\
 \hline
 
 \end{longtable}

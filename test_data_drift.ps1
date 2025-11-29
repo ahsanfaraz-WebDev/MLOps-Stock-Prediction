@@ -50,8 +50,8 @@ try {
     if ($driftValue -gt 0) {
         Write-Host ""
         Write-Host "[OK] Data drift detection is working!" -ForegroundColor Green
-        Write-Host "  -> Check Grafana dashboard 'Data Drift Ratio' panel" -ForegroundColor Cyan
-        Write-Host "  -> Check Prometheus: http://localhost:9090" -ForegroundColor Cyan
+        Write-Host "  Check Grafana dashboard 'Data Drift Ratio' panel" -ForegroundColor Cyan
+        Write-Host "  Check Prometheus: http://localhost:9090" -ForegroundColor Cyan
     } else {
         Write-Host ""
         Write-Host "[WARNING] No drift detected yet. Try running the script again." -ForegroundColor Yellow
@@ -64,5 +64,5 @@ try {
 Write-Host ""
 Write-Host "=== Next Steps ===" -ForegroundColor Cyan
 Write-Host "1. Open Grafana: http://localhost:3000" -ForegroundColor White
-Write-Host "2. Go to Alerting -> Alert rules" -ForegroundColor White
+Write-Host "2. Go to Alerting - Alert rules" -ForegroundColor White
 Write-Host "3. Create alerts for High Latency and Data Drift" -ForegroundColor White
