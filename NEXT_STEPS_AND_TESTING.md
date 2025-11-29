@@ -154,13 +154,9 @@
 **Prerequisites**: 
 - You need at least one model in MLflow Model Registry (from Test 2)
 - Docker Hub repository should exist (or will be created automatically)
+- Model promotion to Production happens automatically in the CD workflow
 
-1. **Promote a model to Production** (if you have one in Staging):
-   - Go to Dagshub → MLflow → Model Registry
-   - Find your model in "Staging"
-   - Click "Transition to Production"
-
-2. **Create PR from `test` to `main`:**
+1. **Create PR from `test` to `main`:**
    ```bash
    git checkout test
    git pull origin test
