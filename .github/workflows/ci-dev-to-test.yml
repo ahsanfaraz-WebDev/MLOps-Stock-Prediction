@@ -70,21 +70,27 @@ jobs:
         echo "Training model with data: $LATEST_DATA"
         python src/train.py "$LATEST_DATA"
     
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
     - name: Install CML
       run: |
-        pip install dvc[all] cml
+        npm install -g @dvcorg/cml
     
-    - name: Compare models with CML
+    - name: Compare models and post report
       env:
-        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Install MLflow client for model comparison
-        pip install mlflow
+        pip install mlflow python-dotenv
         
-        # Get current model metrics from MLflow
+        # Get current model metrics from MLflow and generate report
         python << EOF
         import mlflow
         import os
@@ -99,10 +105,15 @@ jobs:
         
         # Get the latest run (current model)
         from src.config import MODEL_NAME
+        model_worse = False
+        
         try:
             latest_run = client.search_runs(experiment_ids=["0"], max_results=1, order_by=["start_time DESC"])[0]
             current_test_rmse = latest_run.data.metrics.get('test_rmse', None)
             current_test_r2 = latest_run.data.metrics.get('test_r2', None)
+            
+            # Build report
+            report_lines = ["## Model Performance Comparison\n\n"]
             
             # Try to get production model metrics
             try:
@@ -113,50 +124,82 @@ jobs:
                     prod_test_rmse = prod_run.data.metrics.get('test_rmse', None)
                     prod_test_r2 = prod_run.data.metrics.get('test_r2', None)
                     
-                    # Compare models
-                    with open('report.md', 'w') as f:
-                        f.write("## Model Performance Comparison\n\n")
-                        f.write("### Current Model (from this PR)\n")
-                        f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
-                        f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
-                        f.write("### Production Model\n")
-                        f.write(f"- Test RMSE: {prod_test_rmse:.4f}\n")
-                        f.write(f"- Test R²: {prod_test_r2:.4f}\n\n")
-                        
-                        # Determine if model is better
-                        if current_test_rmse and prod_test_rmse:
-                            rmse_improvement = ((prod_test_rmse - current_test_rmse) / prod_test_rmse) * 100
-                            if current_test_rmse < prod_test_rmse:
-                                f.write(f"✅ **Model Improvement**: RMSE improved by {rmse_improvement:.2f}%\n")
-                            else:
-                                f.write(f"❌ **Model Degradation**: RMSE worsened by {abs(rmse_improvement):.2f}%\n")
-                                f.write("\n⚠️ **Merge should be blocked** - New model performs worse than production.\n")
-                                sys.exit(1)  # Exit with error to block merge
+                    report_lines.append("### Current Model (from this PR)\n")
+                    report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                    report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
+                    report_lines.append("### Production Model\n")
+                    report_lines.append(f"- Test RMSE: {prod_test_rmse:.4f}\n")
+                    report_lines.append(f"- Test R²: {prod_test_r2:.4f}\n\n")
+                    
+                    # Determine if model is better
+                    if current_test_rmse and prod_test_rmse:
+                        rmse_improvement = ((prod_test_rmse - current_test_rmse) / prod_test_rmse) * 100
+                        if current_test_rmse < prod_test_rmse:
+                            report_lines.append(f"✅ **Model Improvement**: RMSE improved by {rmse_improvement:.2f}%\n")
+                            report_lines.append("\n✅ **Merge Approved** - New model performs better than production.\n")
+                        else:
+                            report_lines.append(f"❌ **Model Degradation**: RMSE worsened by {abs(rmse_improvement):.2f}%\n")
+                            report_lines.append("\n🚫 **Merge Blocked** - New model performs worse than production.\n")
+                            report_lines.append("\n**Action Required**: Please improve the model before merging.\n")
+                            model_worse = True
                 else:
                     # No production model, just report current metrics
-                    with open('report.md', 'w') as f:
-                        f.write("## Model Training Results\n\n")
-                        f.write("### Current Model\n")
-                        f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
-                        f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
-                        f.write("ℹ️ No production model found for comparison.\n")
+                    report_lines.append("### Current Model\n")
+                    report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                    report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
+                    report_lines.append("ℹ️ No production model found for comparison.\n")
+                    report_lines.append("✅ **Merge Approved** - This will be the first production model.\n")
             except Exception as e:
                 # No production model in registry yet
-                with open('report.md', 'w') as f:
-                    f.write("## Model Training Results\n\n")
-                    f.write("### Current Model\n")
-                    f.write(f"- Test RMSE: {current_test_rmse:.4f}\n")
-                    f.write(f"- Test R²: {current_test_r2:.4f}\n\n")
-                    f.write("ℹ️ No production model found for comparison.\n")
+                report_lines.append("### Current Model\n")
+                report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
+                report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
+                report_lines.append("ℹ️ No production model found for comparison.\n")
+                report_lines.append("✅ **Merge Approved** - This will be the first production model.\n")
         except Exception as e:
             print(f"Error comparing models: {e}")
-            sys.exit(1)
+            report_lines = ["## Model Training Results\n\n"]
+            report_lines.append(f"⚠️ Error retrieving model metrics: {str(e)}\n")
+            report_lines.append("\n🚫 **Merge Blocked** - Unable to verify model performance.\n")
+            model_worse = True
+        
+        # Write report to file for CML
+        report_body = "".join(report_lines)
+        with open('report.md', 'w') as f:
+            f.write(report_body)
+        
+        # Write exit code to file so bash can read it
+        with open('model_check_result.txt', 'w') as f:
+            f.write('1' if model_worse else '0')
+        
+        print("\n" + "="*60)
+        print("MODEL COMPARISON REPORT")
+        print("="*60)
+        print(report_body)
+        print("="*60 + "\n")
+        
+        if model_worse:
+            print("❌ Model performance check FAILED - Merge will be blocked")
+        else:
+            print("✅ Model performance check PASSED - Merge approved")
         EOF
         
-        # Post CML report as PR comment
+        # Read the exit code from file
+        MODEL_CHECK_FAILED=$(cat model_check_result.txt)
+        
+        # Always post CML report (even if model is worse)
         if [ -f "report.md" ]; then
-          cml comment create report.md || echo "CML comment failed, continuing..."
+          echo "Posting CML report to PR..."
+          cml comment create report.md || echo "CML comment failed, but continuing..."
         fi
+        
+        # Exit with error to block merge if model is worse
+        if [ "$MODEL_CHECK_FAILED" = "1" ]; then
+          echo "❌ Model performance check failed - Blocking merge"
+          exit 1
+        fi
+        
+        echo "✅ Model performance check passed"
     
     - name: Check model performance
       run: |
