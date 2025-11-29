@@ -10,11 +10,6 @@ on:
       - 'requirements.txt'
       - '.github/workflows/**'
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-
 jobs:
   train-and-compare:
     runs-on: ubuntu-latest
@@ -43,18 +38,17 @@ jobs:
       run: |
         dvc remote list || echo "DVC remotes not configured"
     
-    - name: Pull latest data from DVC
+    - name: Configure AWS credentials
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: us-east-1
       run: |
-        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
-          echo "AWS credentials configured, attempting DVC pull..."
-          dvc pull || echo "DVC pull failed, will try to use existing data or fetch new data"
-        else
-          echo "AWS credentials not configured, skipping DVC pull"
-        fi
+        echo "AWS credentials configured"
+    
+    - name: Pull latest data from DVC
+      run: |
+        dvc pull || echo "DVC pull failed, continuing..."
       continue-on-error: true
     
     - name: Train model
@@ -63,44 +57,20 @@ jobs:
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
-        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Find the latest processed data file
         LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
-        
         if [ -z "$LATEST_DATA" ]; then
-          echo "No processed data found. Attempting to run data pipeline..."
-          
-          # Try to fetch new data (may fail due to API rate limits)
-          if python src/data_extraction.py 2>&1 | grep -q "Rate Limit"; then
-            echo "⚠️ Alpha Vantage API rate limit reached. Checking for existing raw data..."
-            # Check if there's any raw data we can use
-            RAW_DATA=$(ls -t data/raw/stock_data_*.csv 2>/dev/null | head -1)
-            if [ -n "$RAW_DATA" ]; then
-              echo "Found existing raw data: $RAW_DATA"
-              python src/data_transformation.py "$RAW_DATA"
-              LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
-            else
-              echo "❌ No data available: API rate limited and no existing data found"
-              echo "Skipping model training - please ensure data is available via DVC or wait for API limit reset"
-              exit 1
-            fi
-          else
-            # Data extraction succeeded, now transform
-            python src/data_transformation.py data/raw/stock_data_AAPL_*.csv
-            LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv | head -1)
-          fi
+          echo "No processed data found. Running data pipeline..."
+          # Run data extraction and transformation
+          python src/data_extraction.py
+          python src/data_transformation.py data/raw/stock_data_AAPL_*.csv
+          LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv | head -1)
         fi
-        
-        if [ -z "$LATEST_DATA" ]; then
-          echo "❌ Error: No processed data file found after attempting data pipeline"
-          exit 1
-        fi
-        
         echo "Training model with data: $LATEST_DATA"
         python src/train.py "$LATEST_DATA"
     
-    - name: Set up Node.js for CML
+    - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
@@ -109,18 +79,18 @@ jobs:
       run: |
         npm install -g @dvcorg/cml
     
-    - name: Compare models with CML
+    - name: Compare models and post report
       env:
-        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
         PYTHONPATH: ${{ github.workspace }}
       run: |
         # Install MLflow client for model comparison
-        pip install mlflow
+        pip install mlflow python-dotenv
         
-        # Get current model metrics from MLflow
+        # Get current model metrics from MLflow and generate report
         python << EOF
         import mlflow
         import os
@@ -166,9 +136,11 @@ jobs:
                         rmse_improvement = ((prod_test_rmse - current_test_rmse) / prod_test_rmse) * 100
                         if current_test_rmse < prod_test_rmse:
                             report_lines.append(f"✅ **Model Improvement**: RMSE improved by {rmse_improvement:.2f}%\n")
+                            report_lines.append("\n✅ **Merge Approved** - New model performs better than production.\n")
                         else:
                             report_lines.append(f"❌ **Model Degradation**: RMSE worsened by {abs(rmse_improvement):.2f}%\n")
-                            report_lines.append("\n⚠️ **Merge should be blocked** - New model performs worse than production.\n")
+                            report_lines.append("\n🚫 **Merge Blocked** - New model performs worse than production.\n")
+                            report_lines.append("\n**Action Required**: Please improve the model before merging.\n")
                             model_worse = True
                 else:
                     # No production model, just report current metrics
@@ -176,21 +148,29 @@ jobs:
                     report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
                     report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
                     report_lines.append("ℹ️ No production model found for comparison.\n")
+                    report_lines.append("✅ **Merge Approved** - This will be the first production model.\n")
             except Exception as e:
                 # No production model in registry yet
                 report_lines.append("### Current Model\n")
                 report_lines.append(f"- Test RMSE: {current_test_rmse:.4f}\n")
                 report_lines.append(f"- Test R²: {current_test_r2:.4f}\n\n")
                 report_lines.append("ℹ️ No production model found for comparison.\n")
+                report_lines.append("✅ **Merge Approved** - This will be the first production model.\n")
         except Exception as e:
             print(f"Error comparing models: {e}")
             report_lines = ["## Model Training Results\n\n"]
             report_lines.append(f"⚠️ Error retrieving model metrics: {str(e)}\n")
+            report_lines.append("\n🚫 **Merge Blocked** - Unable to verify model performance.\n")
+            model_worse = True
         
         # Write report to file for CML
         report_body = "".join(report_lines)
         with open('report.md', 'w') as f:
             f.write(report_body)
+        
+        # Write exit code to file so bash can read it
+        with open('model_check_result.txt', 'w') as f:
+            f.write('1' if model_worse else '0')
         
         print("\n" + "="*60)
         print("MODEL COMPARISON REPORT")
@@ -198,15 +178,28 @@ jobs:
         print(report_body)
         print("="*60 + "\n")
         
-        # Exit with error if model is worse (before CML posts comment)
         if model_worse:
-            sys.exit(1)
+            print("❌ Model performance check FAILED - Merge will be blocked")
+        else:
+            print("✅ Model performance check PASSED - Merge approved")
         EOF
         
-        # Post CML report as PR comment
+        # Read the exit code from file
+        MODEL_CHECK_FAILED=$(cat model_check_result.txt)
+        
+        # Always post CML report (even if model is worse)
         if [ -f "report.md" ]; then
-          cml comment create report.md || echo "CML comment failed, continuing..."
+          echo "Posting CML report to PR..."
+          cml comment create report.md || echo "CML comment failed, but continuing..."
         fi
+        
+        # Exit with error to block merge if model is worse
+        if [ "$MODEL_CHECK_FAILED" = "1" ]; then
+          echo "❌ Model performance check failed - Blocking merge"
+          exit 1
+        fi
+        
+        echo "✅ Model performance check passed"
     
     - name: Check model performance
       run: |
