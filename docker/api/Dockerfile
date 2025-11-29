@@ -13,8 +13,11 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt /tmp/requirements.txt
 
 # Install Python dependencies
+# Use pip's new resolver with constraints to speed up dependency resolution
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --timeout=300 --retries=5 -r /tmp/requirements.txt
+    pip install --no-cache-dir --timeout=300 --retries=3 \
+        --prefer-binary \
+        -r /tmp/requirements.txt
 
 # Copy application code
 COPY src/ /app/src/
