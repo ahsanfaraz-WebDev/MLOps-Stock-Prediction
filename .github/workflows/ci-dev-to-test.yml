@@ -52,8 +52,17 @@ jobs:
         echo "AWS credentials configured"
     
     - name: Pull latest data from DVC
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
       run: |
-        dvc pull || echo "DVC pull failed, continuing..."
+        if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+          echo "AWS credentials configured, attempting DVC pull..."
+          dvc pull || echo "DVC pull failed, continuing..."
+        else
+          echo "AWS credentials not configured, skipping DVC pull"
+        fi
       continue-on-error: true
     
     - name: Train model
@@ -62,6 +71,7 @@ jobs:
         DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
         DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         # Find the latest processed data file
         LATEST_DATA=$(ls -t data/processed/stock_data_processed_*.csv 2>/dev/null | head -1)
