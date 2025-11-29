@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# Data
+data/raw/*
+data/processed/*
+*.csv
+*.parquet
+
+# Models
+models/*.pkl
+models/*.joblib
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+airflow/airflow.cfg
+
+# DVC
+.dvc/cache/
+.dvc/tmp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+
+

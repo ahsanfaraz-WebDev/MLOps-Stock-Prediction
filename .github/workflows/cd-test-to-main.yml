@@ -1,0 +1,143 @@
+#i228791
+#i222637
+
+name: CD - Test to Main (Deploy to Production)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'docker/**'
+      - '.github/workflows/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mlflow boto3 python-dotenv
+    
+    - name: Fetch best model from MLflow Model Registry
+      env:
+        MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+        DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        python << EOF
+        import mlflow
+        import os
+        from pathlib import Path
+        
+        mlflow.set_tracking_uri(os.environ.get('MLFLOW_TRACKING_URI'))
+        if os.environ.get('DAGSHUB_USERNAME') and os.environ.get('DAGSHUB_TOKEN'):
+            os.environ['MLFLOW_TRACKING_USERNAME'] = os.environ.get('DAGSHUB_USERNAME')
+            os.environ['MLFLOW_TRACKING_PASSWORD'] = os.environ.get('DAGSHUB_TOKEN')
+        
+        from src.config import MODEL_NAME
+        
+        client = mlflow.tracking.MlflowClient()
+        
+        # Get production model from Model Registry
+        try:
+            prod_versions = client.get_latest_versions(MODEL_NAME, stages=["Production"])
+            if not prod_versions:
+                # Fallback to Staging if no Production model
+                prod_versions = client.get_latest_versions(MODEL_NAME, stages=["Staging"])
+            
+            if prod_versions:
+                model_version = prod_versions[0]
+                print(f"Found model: {MODEL_NAME} version {model_version.version} in stage {model_version.current_stage}")
+                
+                # Download model artifacts
+                model_path = Path("models")
+                model_path.mkdir(exist_ok=True)
+                
+                # Download model using MLflow
+                mlflow.artifacts.download_artifacts(
+                    artifact_uri=f"models:/{MODEL_NAME}/{model_version.version}",
+                    dst_path=str(model_path)
+                )
+                
+                # If model is in a subdirectory, move it to the expected location
+                import shutil
+                model_files = list(model_path.rglob("*.pkl"))
+                if model_files:
+                    shutil.copy(model_files[0], model_path / "stock_model.pkl")
+                    print(f"Model downloaded to: {model_path / 'stock_model.pkl'}")
+                else:
+                    print("Warning: No .pkl file found in downloaded artifacts")
+                
+                # Promote model to Production stage
+                if model_version.current_stage != "Production":
+                    print(f"Promoting model from {model_version.current_stage} to Production...")
+                    client.transition_model_version_stage(
+                        name=MODEL_NAME,
+                        version=model_version.version,
+                        stage="Production"
+                    )
+                    print(f"✓ Model {MODEL_NAME} version {model_version.version} promoted to Production")
+                else:
+                    print(f"Model {MODEL_NAME} version {model_version.version} is already in Production")
+            else:
+                print(f"Warning: No model found in Model Registry for {MODEL_NAME}")
+                print("Will use model from previous CI step if available")
+        except Exception as e:
+            print(f"Error fetching model from MLflow: {e}")
+            print("Will use model from previous CI step if available")
+        EOF
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+    
+    - name: Build Docker image
+      run: |
+        docker build -f docker/api/Dockerfile -t ${{ secrets.DOCKER_HUB_USERNAME }}/mlops-stock-prediction-api:latest .
+        docker build -f docker/api/Dockerfile -t ${{ secrets.DOCKER_HUB_USERNAME }}/mlops-stock-prediction-api:${{ github.sha }} .
+    
+    - name: Push Docker image to Docker Hub
+      run: |
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/mlops-stock-prediction-api:latest
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/mlops-stock-prediction-api:${{ github.sha }}
+    
+    - name: Verify deployment
+      run: |
+        # Pull and run the image to verify it works
+        docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/mlops-stock-prediction-api:latest
+        docker run -d -p 8000:8000 --name test-api ${{ secrets.DOCKER_HUB_USERNAME }}/mlops-stock-prediction-api:latest
+        sleep 10
+        
+        # Check health endpoint
+        curl -f http://localhost:8000/health || exit 1
+        
+        # Cleanup
+        docker stop test-api
+        docker rm test-api
+    
+    - name: Create deployment tag
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git tag -a "v$(date +%Y%m%d-%H%M%S)" -m "Deployment from commit ${{ github.sha }}"
+        git push origin --tags || echo "Tag push failed"
+

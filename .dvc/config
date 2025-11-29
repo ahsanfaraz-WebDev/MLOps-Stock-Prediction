@@ -1,0 +1,7 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = s3://mlops-stock-prediction-data/dvc-storage
+    region = us-east-1
+['remote "origin"']
+    url = https://dagshub.com/ahsanfaraz-WebDev/MLOps-Stock-Prediction.dvc
