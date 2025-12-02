@@ -139,7 +139,7 @@ def fetch_stock_data(symbol=None, api_key=None):
         
         df.to_csv(output_path)
         
-        print(f"✓ Data saved successfully!")
+        print(f"Data saved successfully")
         print(f"  File: {output_path}")
         print(f"  Shape: {df.shape[0]} rows × {df.shape[1]} columns")
         print(f"  Date range: {df.index.min()} to {df.index.max()}")
@@ -163,11 +163,11 @@ if __name__ == "__main__":
         api_key = sys.argv[2] if len(sys.argv) > 2 else None
         
         file_path = fetch_stock_data(symbol=symbol, api_key=api_key)
-        print(f"\n✓ Extraction completed successfully!")
+        print(f"\nExtraction completed successfully")
         print(f"Output file: {file_path}")
         
     except Exception as e:
-        print(f"\n✗ Error: {str(e)}", file=sys.stderr)
+        print(f"\nERROR: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
 

@@ -108,7 +108,7 @@ def select_features(X_train, y_train, X_test, n_features_to_select=None):
     selected_mask = selector.get_support()
     selected_feature_names = X_train.columns[selected_mask].tolist()
     
-    print(f"  ✓ Selected {len(selected_feature_names)} features")
+    print(f"  Selected {len(selected_feature_names)} features")
     
     # Convert back to DataFrame for easier handling
     X_train_selected = pd.DataFrame(X_train_selected, columns=selected_feature_names, index=X_train.index)
@@ -132,7 +132,7 @@ def train_model(data_path):
     # Load processed data
     try:
         df = pd.read_csv(data_path, index_col=0, parse_dates=True)
-        print(f"✓ Loaded {len(df)} rows from {data_path}")
+        print(f"Loaded {len(df)} rows from {data_path}")
     except Exception as e:
         raise Exception(f"Error loading data: {str(e)}")
     
@@ -158,7 +158,7 @@ def train_model(data_path):
     # Warn if dataset is very small
     if len(X) < 50:
         warnings.warn(
-            f"⚠️  Very small dataset ({len(X)} samples). Model performance may be poor. "
+            f"WARNING: Very small dataset ({len(X)} samples). Model performance may be poor. "
             "Consider collecting more data.",
             UserWarning
         )
@@ -236,7 +236,7 @@ def train_model(data_path):
                 n_jobs=-1
             )
             model.fit(X_train_selected, y_train)
-            print("✓ Model trained successfully")
+            print("Model trained successfully")
             
             # Make predictions
             y_pred_train = model.predict(X_train_selected)
@@ -306,50 +306,50 @@ def train_model(data_path):
                 # Check if test set has very low variance (which can cause negative R² even with good RMSE)
                 if test_std < train_std * 0.5:
                     warnings.warn(
-                        f"⚠️  WARNING: Test R² is negative ({test_r2:.4f}), but test set has low variance "
+                        f"WARNING: Test R² is negative ({test_r2:.4f}), but test set has low variance "
                         f"(std={test_std:.4f} vs train std={train_std:.4f}). "
                         f"Test RMSE ({test_rmse:.4f}) is actually better than train RMSE ({train_rmse:.4f}). "
                         "This may indicate the test set is easier to predict. Consider collecting more data.",
                         UserWarning
                     )
-                    print(f"⚠️  Test R² is negative: {test_r2:.4f}")
+                    print(f"WARNING  Test R² is negative: {test_r2:.4f}")
                     print(f"   Note: Test RMSE ({test_rmse:.4f}) < Train RMSE ({train_rmse:.4f})")
                     print(f"   Test set variance is low (std={test_std:.4f}), which can cause negative R²")
                 else:
                     warnings.warn(
-                        f"⚠️  WARNING: Test R² is negative ({test_r2:.4f}). "
+                        f"WARNING: Test R² is negative ({test_r2:.4f}). "
                         "Model performs worse than predicting the mean. "
                         "This indicates severe overfitting or data issues.",
                         UserWarning
                     )
-                    print(f"⚠️  Test R² is negative: {test_r2:.4f}")
+                    print(f"WARNING  Test R² is negative: {test_r2:.4f}")
             elif test_r2 < 0.3:
                 warnings.warn(
-                    f"⚠️  WARNING: Test R² is low ({test_r2:.4f}). "
+                    f"WARNING: Test R² is low ({test_r2:.4f}). "
                     "Model performance is poor. Consider collecting more data.",
                     UserWarning
                 )
-                print(f"⚠️  Test R² is low: {test_r2:.4f}")
+                print(f"WARNING: Test R² is low: {test_r2:.4f}")
             else:
-                print(f"✓ Test R² is acceptable: {test_r2:.4f}")
+                print(f"Test R² is acceptable: {test_r2:.4f}")
             
             # Check for overfitting (large gap between train and test)
             if rmse_gap > train_rmse * 2:  # Test RMSE is more than 3x train RMSE
                 warnings.warn(
-                    f"⚠️  WARNING: Large overfitting detected. "
+                    f"WARNING: Large overfitting detected. "
                     f"RMSE gap: {rmse_gap:.4f} (Test RMSE is {test_rmse/train_rmse:.2f}x train RMSE)",
                     UserWarning
                 )
-                print(f"⚠️  Overfitting detected: RMSE gap = {rmse_gap:.4f}")
+                print(f"WARNING: Overfitting detected: RMSE gap = {rmse_gap:.4f}")
             elif r2_gap > 0.3:  # R² gap > 0.3
                 warnings.warn(
-                    f"⚠️  WARNING: Moderate overfitting detected. "
+                    f"WARNING: Moderate overfitting detected. "
                     f"R² gap: {r2_gap:.4f}",
                     UserWarning
                 )
-                print(f"⚠️  Overfitting detected: R² gap = {r2_gap:.4f}")
+                print(f"WARNING: Overfitting detected: R² gap = {r2_gap:.4f}")
             else:
-                print(f"✓ Overfitting is acceptable: R² gap = {r2_gap:.4f}")
+                print(f"Overfitting is acceptable: R² gap = {r2_gap:.4f}")
             
             print(f"{'='*60}\n")
             
@@ -358,7 +358,7 @@ def train_model(data_path):
             model_dir.mkdir(parents=True, exist_ok=True)
             model_path = model_dir / 'stock_model.pkl'
             joblib.dump(model, model_path)
-            print(f"✓ Model saved to: {model_path}")
+            print(f"Model saved to: {model_path}")
             
             # Log model to MLflow
             mlflow.sklearn.log_model(model, "model")
@@ -387,7 +387,7 @@ def train_model(data_path):
                     model_uri=model_uri,
                     name=MODEL_NAME
                 )
-                print(f"\n✓ Model registered in MLflow Model Registry")
+                print(f"\nModel registered in MLflow Model Registry")
                 print(f"  Model Name: {MODEL_NAME}")
                 print(f"  Version: {registered_model.version}")
                 
@@ -401,10 +401,10 @@ def train_model(data_path):
                 print(f"  Stage: Staging")
                 
             except Exception as reg_error:
-                print(f"\n⚠️  Warning: Could not register model in Model Registry: {reg_error}")
+                print(f"\nWARNING: Could not register model in Model Registry: {reg_error}")
                 print("  Model is still logged in MLflow, but not registered.")
             
-            print(f"\n✓ MLflow run completed!")
+            print(f"\nMLflow run completed")
             print(f"Run ID: {mlflow.active_run().info.run_id}")
             
             return str(model_path)
@@ -438,9 +438,9 @@ if __name__ == "__main__":
     
     try:
         model_path = train_model(data_path)
-        print(f"\n✓ Training completed successfully!")
+        print(f"\nTraining completed successfully")
         print(f"Model saved to: {model_path}")
     except Exception as e:
-        print(f"\n✗ Error: {str(e)}", file=sys.stderr)
+        print(f"\nERROR: {str(e)}", file=sys.stderr)
         sys.exit(1)
 

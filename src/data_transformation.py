@@ -160,7 +160,7 @@ def transform_data(input_path, generate_report=True):
     # Load raw data
     try:
         df = pd.read_csv(input_path, index_col=0, parse_dates=True)
-        print(f"✓ Loaded {len(df)} rows from {input_path}")
+        print(f"Loaded {len(df)} rows from {input_path}")
     except Exception as e:
         raise Exception(f"Error loading data: {str(e)}")
     
@@ -179,7 +179,7 @@ def transform_data(input_path, generate_report=True):
     output_path = output_dir / output_filename
     df_processed.to_csv(output_path)
     
-    print(f"\n✓ Processed data saved to: {output_path}")
+    print(f"\nProcessed data saved to: {output_path}")
     
     # Generate data quality report
     report_path = None
@@ -197,12 +197,12 @@ def transform_data(input_path, generate_report=True):
                 progress_bar=False
             )
             profile.to_file(report_path)
-            print(f"✓ Data profile report saved to: {report_path}")
+            print(f"Data profile report saved to: {report_path}")
         except Exception as e:
-            print(f"⚠ Warning: Could not generate profile report: {str(e)}")
+            print(f"WARNING: Could not generate profile report: {str(e)}")
             report_path = None
     elif generate_report and not PROFILING_AVAILABLE:
-        print(f"⚠ Skipping profile report (ydata-profiling not installed)")
+        print(f"WARNING: Skipping profile report (ydata-profiling not installed)")
     
     print(f"\n{'='*60}")
     print(f"Transformation completed successfully!")
@@ -230,7 +230,7 @@ if __name__ == "__main__":
         if report_path:
             print(f"Report file: {report_path}")
     except Exception as e:
-        print(f"\n✗ Error: {str(e)}", file=sys.stderr)
+        print(f"\nERROR: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
 

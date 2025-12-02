@@ -122,6 +122,33 @@ def transform_task(**context):
     print(f"Transformation completed. Output: {output_path}")
     if report_path:
         print(f"Report generated: {report_path}")
+        
+        # Log profiling report to MLflow (REQUIREMENT: Documentation artifact)
+        try:
+            import mlflow
+            from src.config import MLFLOW_TRACKING_URI, DAGSHUB_USERNAME, DAGSHUB_TOKEN
+            
+            if MLFLOW_TRACKING_URI:
+                mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+                
+                # Set credentials if available
+                if DAGSHUB_USERNAME and DAGSHUB_TOKEN:
+                    os.environ['MLFLOW_TRACKING_USERNAME'] = DAGSHUB_USERNAME
+                    os.environ['MLFLOW_TRACKING_PASSWORD'] = DAGSHUB_TOKEN
+                
+                # Start MLflow run for data profiling artifact
+                run_name = f"data_profile_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                with mlflow.start_run(run_name=run_name, nested=True):
+                    # Log the profiling report as artifact
+                    mlflow.log_artifact(report_path, artifact_path="data_profiles")
+                    print(f"✓ Profile report logged to MLflow: {report_path}")
+                    print(f"  MLflow Tracking URI: {MLFLOW_TRACKING_URI}")
+                    print(f"  Artifact path: data_profiles/{Path(report_path).name}")
+        except ImportError:
+            print("WARNING: MLflow not available. Skipping profile report logging.")
+        except Exception as e:
+            print(f"WARNING: Could not log profile report to MLflow: {str(e)}")
+            print("  Report is still available locally, but not logged to MLflow.")
     
     return output_path
 
